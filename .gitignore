@@ -1,0 +1,7 @@
+corpus/*
+corpus_wiki/*
+data_set/*
+__pycache__/*
+tgc/*
+tgc_wiki/*
+corpus.tar.gz
