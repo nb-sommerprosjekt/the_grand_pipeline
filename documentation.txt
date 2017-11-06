@@ -1,0 +1,37 @@
+#config-file: 
+
+#preprocessing:
+name_corpus:::  (default:::corpus)
+stemming:::False (default:::False)
+sentences:::False (default:::False)
+stop_words:::True (default:::True)
+extra_functions:::False (default:::False)
+lower_case:::True  (default:::True)
+
+#split_training_test
+test_ratio:::0.2 (default:::0.2, range:::0:1)
+
+
+#process_training:
+article_size:::500
+create_fake:::True (default::False)
+wikipedia:::True (default:::True)
+minimum_articles:::1 (default:::1  range:::=>1)
+dewey_digits:::3  (default:::3   range:::=>0  , 0 is no limit)
+
+#model_parameters:
+
+#fast_text:
+epochs:::75 (default:::75)
+lr:::0.3 (default:::0.3 range:::0:1
+lr_update:::
+loss:::
+wiki_vec:::False (default:::False)
+word_window:::5 (default:::5  range:::1:10)
+
+#cnn:
+
+
+
+
+
