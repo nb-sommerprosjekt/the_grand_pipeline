@@ -20,15 +20,24 @@ def load_config(config_file):
             if len(line)>4:
                 if line[0]!="#":
                     temp=line.split(":::")
-                    config[temp[0]]=temp[1].strip()
+                    temp[1]=temp[1].strip()
+                    if temp[1] is int:
+                        config[temp[0]]=int(temp[1])
+                    else:
+                        config[temp[0]]=temp[1]
     print("Config-file loaded")
     return config
 
 def preprocess(corpus_name,stemming, stop_words,sentences,lower_case,extra_functions):
     counter=0
     rootdir="tgc"
-    if not os.path.exists(corpus_name):
-        os.makedirs(corpus_name)
+    corpus_name_folder="data_set/"+corpus_name+"_folder"
+    corpus_name_location=corpus_name_folder+"/"+corpus_name
+
+    if not os.path.exists(corpus_name_folder):
+        os.makedirs(corpus_name_folder)
+    if not os.path.exists(corpus_name_location):
+        os.makedirs(corpus_name_location)
         print("Preprocessing the corpus from the folder 'tcg'.")
         for subdir, dirs, files in os.walk(rootdir):
             for file in files:
@@ -59,23 +68,24 @@ def preprocess(corpus_name,stemming, stop_words,sentences,lower_case,extra_funct
                         # FUNCTION_CALL()
                         # FUNCTION_CALL()
                         pass
-                    file=open(os.path.join(corpus_name, file[5:]),"w")
+                    file=open(os.path.join(corpus_name_location, file[5:]),"w")
                     file.write("__label__"+dewey+" "+text)
-        print("Preprocessed corpus saved in the folder {}".format(corpus_name))
-        return corpus_name  #Kanskje kjøre neste steg.
+        print("Preprocessed corpus saved in the folder {}".format(corpus_name_location))
+        return corpus_name_folder  #Kanskje kjøre neste steg.
 
 
 
     else:
-        print("Corpus is already created, using {} ".format(corpus_name))
-        return corpus_name  #Kanskje kjøre neste steg.
+        print("Corpus is already created, using {} ".format(corpus_name_location))
+        return corpus_name_folder #Kanskje kjøre neste steg.
 
-def preprocess_wiki(wiki_corpus_name,stemming, stop_words, sentences,lower_case, extra_functions):
+def preprocess_wiki(corpus_folder,wiki_corpus_name,stemming, stop_words, sentences,lower_case, extra_functions):
 
     rootdir="tgc_wiki"
     counter=0
-    if not os.path.exists(wiki_corpus_name):
-        os.makedirs(wiki_corpus_name)
+    wiki_corpus_folder=os.path.join(corpus_folder,wiki_corpus_name)
+    if not os.path.exists(wiki_corpus_folder):
+        os.makedirs(wiki_corpus_folder)
         print("Preprocessing wiki data")
         for subdir, dirs, files in os.walk(rootdir):
             for file in files:
@@ -110,40 +120,28 @@ def preprocess_wiki(wiki_corpus_name,stemming, stop_words, sentences,lower_case,
                     # FUNCTION_CALL()
                     pass
 
-                file = open(os.path.join(wiki_corpus_name, file), "w+")
-                file.write("__label__" + dewey + " " + text)
+                f2 = open(os.path.join(wiki_corpus_folder, file), "w+")
+                f2.write("__label__" + dewey + " " + text)
         print("Preprocessed  wiki_corpus saved in the folder {}".format(wiki_corpus_name))
-        return wiki_corpus_name  #Kanskje kjøre neste steg.
+        return wiki_corpus_folder  #Kanskje kjøre neste steg.
 
     else:
         print("Wiki corpus is already created, using {} ".format(wiki_corpus_name))
-        return wiki_corpus_name  #Kanskje kjøre neste steg.
+        return wiki_corpus_folder  #Kanskje kjøre neste steg.
 
 
 
-def split_to_training_and_test(corpus_name, test_ratio,dewey_digits):
+def split_to_training_and_test(corpus_folder,corpus_name, test_ratio,dewey_digits):
     print("Splitting to training and test:")
-    training_folder="data_set/"+corpus_name+"_training"
-    test_folder="data_set/"+corpus_name+"_test"
-
-    if  os.path.exists(training_folder):
-        shutil.rmtree(training_folder)
-        os.makedirs(training_folder)
-    else:
-        os.makedirs(training_folder)
-
-    if  os.path.exists(test_folder):
-        shutil.rmtree(test_folder)
-        os.makedirs(test_folder)
-    else:
-        os.makedirs(test_folder)
+    training_folder= corpus_folder +"/"+corpus_name+"_training"
+    test_folder= corpus_folder +"/"+corpus_name+"_test"
+    corpus_name_location=corpus_folder +"/"+corpus_name
 
     dewey_dict={}
 
-
-    for subdir, dirs, files in os.walk(corpus_name):
+    for subdir, dirs, files in os.walk(corpus_name_location):
         for file in files:
-            f = open(os.path.join(corpus_name, file), "r+")
+            f = open(os.path.join(corpus_name_location, file), "r+")
             text = f.read()
 
             dewey = text.split(" ")[0].replace("__label__", "")
@@ -169,22 +167,43 @@ def split_to_training_and_test(corpus_name, test_ratio,dewey_digits):
         else:
             training_list.extend(temp_list)
 
-    print("Training set is  {} articles.".format(len(training_list)))
-    for file in training_list:
-        copyfile(os.path.join(corpus_name,file),os.path.join(training_folder,file))
 
-    print("Test set is  {} articles.".format(len(test_list)))
-    for file in test_list:
-        copyfile(os.path.join(corpus_name,file),os.path.join(test_folder,file))
+    if  os.path.exists(training_folder):
+        print("The test-folder already exists. No action will be taken. ")
+        print("Training set is  {} articles.".format(len(training_list)))
+        # shutil.rmtree(training_folder)
+        # os.makedirs(training_folder)
+    else:
+        os.makedirs(training_folder)
+        print("Training set is  {} articles.".format(len(training_list)))
+        for file in training_list:
+            copyfile(os.path.join(corpus_name_location, file), os.path.join(training_folder, file))
+
+    if  os.path.exists(test_folder):
+        print("The test-folder already exists. No action will be taken. ")
+        print("Test set is  {} articles.".format(len(test_list)))
+        # shutil.rmtree(test_folder)
+        # os.makedirs(test_folder)
+    else:
+        os.makedirs(test_folder)
+        print("Test set is  {} articles.".format(len(test_list)))
+        for file in test_list:
+            copyfile(os.path.join(corpus_name_location, file), os.path.join(test_folder, file))
+
+
+
+
+
+
     print("Splitting: Complete.")
     return training_folder, test_folder
 
 
-def add_wiki_to_training(wiki_corpus_name,training_folder):
+def add_wiki_to_training(wiki_corpus_folder,training_folder):
     print("Adding wiki data to training set. ")
-    for subdir, dirs, files in os.walk(wiki_corpus_name):
+    for subdir, dirs, files in os.walk(wiki_corpus_folder):
         for file in files:
-            copyfile(os.path.join(wiki_corpus_name, file), os.path.join(training_folder, file))
+            copyfile(os.path.join(wiki_corpus_folder, file), os.path.join(training_folder, file))
     for subdir,dirs,files in os.walk(training_folder):
         print("New total in training set: {}".format(len(files) ))
         break
@@ -195,68 +214,185 @@ def add_wiki_to_training(wiki_corpus_name,training_folder):
 
 def split_text(text, number_of_words_per_output_article):
     tokenized_text = word_tokenize(text, language="norwegian")
-    split_count = max(1, floor(len(tokenized_text)/number_of_words_per_output_article))
+    split_count = max(1, floor(len(tokenized_text)/int(number_of_words_per_output_article)))
     split_texts = array_split(tokenized_text,split_count)
     return split_texts
 
-def split_training_articles(training_folder, article_length):
-    training_folder_split=training_folder+"_split"
+def split_articles(folder, article_length):
+    article_length=int(article_length)
+    folder_split=folder+"_split"
 
-    if  os.path.exists(training_folder_split):
-        shutil.rmtree(training_folder_split)
-        os.makedirs(training_folder_split)
+    if  os.path.exists(folder_split):
+        # shutil.rmtree(training_folder_split)
+        # os.makedirs(training_folder_split)
+        print("The split-folder already exists. No action will be taken. ")
+        return folder_split
     else:
-        os.makedirs(training_folder_split)
+        os.makedirs(folder_split)
 
-    for subdir, dirs, files in os.walk(training_folder):
+    for subdir, dirs, files in os.walk(folder):
         for file in files:
-            f = open(os.path.join(training_folder, file), "r+")
+            f = open(os.path.join(folder, file), "r+")
             text=f.read()
             text= text.split(" ")
             dewey = text[0].replace("__label__", "")
             text=" ".join(text[1:])
-            #print(dewey)
+            print(dewey)
 
             texts=split_text(text,article_length)
             for i,text in enumerate(texts):
 
                 temp = list(text)
                 text=" ".join(temp)
-                #print(i, text)
-                f =open(os.path.join(training_folder_split,file[:-4]+"_"+str(i)+file[-4:]),"w+")
+                print(i, len(text))
+                print(os.path.join(folder_split,file[:-4]+"_"+str(i)+file[-4:]))
+                f =open(os.path.join(folder_split,file[:-4]+"_"+str(i)+file[-4:]),"w+")
                 f.write("__label__"+dewey+" "+str(text))
 
 
-    return training_folder_split
-
-def fix_corpus(folder, name_of_new_folder):
-
-    if not os.path.exists(name_of_new_folder):
-        os.makedirs(name_of_new_folder)
+    return folder_split
 
 
-    arr_txt = [path for path in os.listdir(folder) if path.endswith(".txt")]
-    for article_path in arr_txt:
-        with open(folder+"/"+article_path,"r") as text_file:
-            text = text_file.read().replace('\n',' ')
-        edited_text = open(name_of_new_folder+'/'+article_path,'w')
-        edited_text.write(text)
-        edited_text.close()
+def remove_unecessary_articles(training_folder_split,corpus_folder,minimum_articles,dewey_digits):
+    dewey_digits=int(dewey_digits)
+    rubbish_folder=os.path.join(corpus_folder,"rubbish")
+    if  os.path.exists(rubbish_folder):
+        # shutil.rmtree(training_folder_split)
+        # os.makedirs(training_folder_split)
+        print("The rubbish-folder already exists. No action will be taken. ")
+    else:
+        print("Creating rubbish-folder")
+        os.makedirs(rubbish_folder)
+
+    dewey_dict = {}
+
+
+    for subdir, dirs, files in os.walk(training_folder_split):
+        for file in files:
+            f = open(os.path.join(training_folder_split, file), "r+")
+            text = f.read()
+
+            dewey = text.split(" ")[0].replace("__label__", "")
+            dewey = dewey.replace(".", "")
+            if int(dewey_digits) > 0:
+                if len(dewey) > int(dewey_digits):
+                    dewey = dewey[:dewey_digits]
+
+            if dewey in dewey_dict:
+                dewey_dict[dewey].append(file)
+            else:
+                dewey_dict[dewey] = [file]
+    valid_deweys=set()
+    for key in dewey_dict.keys():
+        if len(dewey_dict[key])<int(minimum_articles):
+            for file in dewey_dict[key]:
+                os.rename(os.path.join(training_folder_split,file),os.path.join(rubbish_folder,file))
+        else:
+            for file in dewey_dict[key]:
+                valid_deweys.add(key)
+                f = open(os.path.join(training_folder_split, file), "r+")
+                text = f.read()
+                text = text.split(" ")
+                dewey = text[0].replace("__label__", "")
+                text = " ".join(text[1:])
+
+                if len(dewey) > dewey_digits:
+                    dewey = dewey[:dewey_digits]
+                f.write("__label__" + dewey + " " + str(text))
+
+
+    return rubbish_folder,valid_deweys
+
+
+def prep_test_set(test_folder,valid_deweys,article_length,dewey_digits):
+    print("Prepping test-folder.")
+    dewey_digits=int(dewey_digits)
+    test_folder_split=split_articles(test_folder,article_length)
+
+    print("Test-folder split.")
+
+    for subdir, dirs, files in os.walk(test_folder_split):
+        for file in files:
+            #print(len(files))
+            f = open(os.path.join(test_folder_split, file), "r+")
+            text = f.read()
+
+            dewey = text.split(" ")[0].replace("__label__", "")
+            dewey = dewey.replace(".", "")
+            if len(dewey) > int(dewey_digits):
+                dewey = dewey[:dewey_digits]
+                print(dewey)
+            print(dewey)
+            if dewey in valid_deweys:
+
+                print("Not thrash")
+                f.write("__label__" + dewey + " " + str(text))
+            else:
+                os.rename(os.path.join(test_folder_split, file), os.path.join(rubbish_folder, file))
+
+
+
+
+
+def load_set(folder,name):
+
+    label_file = open(name + '.txt', 'w')
+    total_tekst = ""
+    tidsskrifter = {}
+    counter = 0
+
+    for subdir, dirs, files in os.walk(folder):
+        for file in files:
+            counter += 1
+            if counter % 1000 == 0:
+                print("Done {} out of {}".format(counter, len(files)))
+            f = open(os.path.join(folder, file), "r+")
+            text = f.read()
+            text = text.split(" ")
+            dewey = text[0].replace("__label__", "")
+            dewey = dewey.replace(".", "")
+            if len(dewey) > siffer:
+                dewey = dewey[:siffer]
+            text = " ".join(text[1:])
+            total_tekst += "__label__" + dewey + " " + text + '\n'
+            # total_tekst+='__label__'+found+' '+tekst2+'\n'
+            # with open('tekst_og_tidsskrift2.pickle', 'wb') as f:
+            #     pickle.dump(tidsskrifter, f)
+    label_file.write(total_tekst)
+    return total_tekst
+
+# def fix_corpus(folder, name_of_new_folder):
+#
+#     if not os.path.exists(name_of_new_folder):
+#         os.makedirs(name_of_new_folder)
+#
+#
+#     arr_txt = [path for path in os.listdir(folder) if path.endswith(".txt")]
+#     for article_path in arr_txt:
+#         with open(folder+"/"+article_path,"r") as text_file:
+#             text = text_file.read().replace('\n',' ')
+#         edited_text = open(name_of_new_folder+'/'+article_path,'w')
+#         edited_text.write(text)
+#         edited_text.close()
 
 if __name__ == '__main__':
 
     # fix_corpus("corpus","corpus2")
     # exit(0)
-    config=load_config("default")
+    config=load_config("new_default")
 
-    #corpus=preprocess(config["name_corpus"], config["stemming"], config["stop_words"],config["sentences"], config["lower_case"], config["extra_functions"])
-    wiki_corpus=preprocess_wiki(config["name_corpus"]+"_wiki", config["stemming"], config["stop_words"], config["sentences"],config["lower_case"], config["extra_functions"])
-    training_folder, test_folder=split_to_training_and_test(config["name_corpus"],0.2,3)
+    corpus_folder=preprocess(config["name_corpus"], config["stemming"], config["stop_words"],config["sentences"], config["lower_case"], config["extra_functions"])
+    wiki_corpus_folder=preprocess_wiki(corpus_folder,config["name_corpus"]+"_wiki", config["stemming"], config["stop_words"], config["sentences"],config["lower_case"], config["extra_functions"])
+    training_folder, test_folder=split_to_training_and_test(corpus_folder, config["name_corpus"],0.2,3)
     if config["wikipedia"]:
-        add_wiki_to_training(config["name_corpus"]+"_wiki",training_folder)
+        add_wiki_to_training(wiki_corpus_folder,training_folder)
     #load_config_file
 
-    split_training_articles(training_folder,1000)
+    training_folder_split=split_articles(training_folder,1000)
+
+    rubbish_folder,valid_deweys=remove_unecessary_articles(training_folder_split,corpus_folder,config["minimum_articles"],config["dewey_digits"])
+    #print(valid_deweys)
+    prep_test_set(test_folder,valid_deweys,config["article_size"],config["dewey_digits"])
 
     #preprocess function
     #result is FT-format-file
