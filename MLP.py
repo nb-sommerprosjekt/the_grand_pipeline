@@ -10,6 +10,7 @@ import time
 import os
 import datetime
 import pickle
+import re
 
 def get_articles(original_name):
     # Tar inn en textfil som er labelet på fasttext-format. Gir ut to arrays. Et med deweys og et med tekstene. [deweys],[texts]
@@ -26,8 +27,30 @@ def get_articles(original_name):
 
     return dewey_array, docs
 
+def get_articles_from_folder(folder):
+    # Tar inn en textfil som er labelet på fasttext-format. Gir ut to arrays. Et med deweys og et med tekstene. [deweys],[texts]
+    arr = os.listdir(folder)
+    arr_txt = [path for path in os.listdir(folder) if path.endswith(".txt")]
 
-def train_mlp(TRAINING_SET, TEST_SET, BATCH_SIZE, VOCAB_SIZE, MAX_SEQUENCE_LENGTH,EPOCHS, FOLDER_TO_SAVE_MODEL, LOSS_MODEL, MODEL_STATS_FILE_NAME):
+
+    dewey_array = []
+    docs = []
+    for article_path in arr_txt:
+            article = open(folder+'/'+article_path, "r")
+            article = article.readlines()
+            for article_content in article:
+                dewey=article_content.partition(' ')[0].replace("__label__","")
+                text  = article_content.replace("__label__"+dewey,"")
+                docs.append(text)
+                dewey_array.append(dewey[:3])
+    text_names = [path.replace('.txt','') for path in arr_txt ]
+    #print(len(dewey_array))
+    #print(text_names)
+    return text_names, dewey_array, docs
+
+
+
+def train_mlp(TRAINING_SET, BATCH_SIZE, VOCAB_SIZE, MAX_SEQUENCE_LENGTH,EPOCHS, FOLDER_TO_SAVE_MODEL, LOSS_MODEL, MODEL_STATS_FILE_NAME,VECTORIZATION_TYPE):
     '''Creating model'''
 
     start_time = time.time()
@@ -36,8 +59,8 @@ def train_mlp(TRAINING_SET, TEST_SET, BATCH_SIZE, VOCAB_SIZE, MAX_SEQUENCE_LENGT
     vocab_size =VOCAB_SIZE
 
 
-    x_train, y_train, tokenizer, num_classes, labels_index = fasttextTrain2mlp(TRAINING_SET, TEST_SET, MAX_SEQUENCE_LENGTH, vocab_size)
-    x_test, y_test = fasttextTest2mlp(TEST_SET,MAX_SEQUENCE_LENGTH,vocab_size, tokenizer, labels_index)
+    x_train, y_train, tokenizer, num_classes, labels_index = fasttextTrain2mlp(TRAINING_SET, MAX_SEQUENCE_LENGTH, vocab_size,VECTORIZATION_TYPE)
+
     ####Preparing test_set
 
     model = Sequential()
@@ -78,7 +101,7 @@ def train_mlp(TRAINING_SET, TEST_SET, BATCH_SIZE, VOCAB_SIZE, MAX_SEQUENCE_LENGT
     time_elapsed = time.time() - start_time
     log_model_stats(MODEL_STATS_FILE_NAME, model_directory,TRAINING_SET,x_train
                 ,num_classes, vocab_size, MAX_SEQUENCE_LENGTH
-                , EPOCHS, time_elapsed, save_model_path, LOSS_MODEL)
+                , EPOCHS, time_elapsed, save_model_path, LOSS_MODEL, VECTORIZATION_TYPE)
 
     #Lagre tokenizer
     with open(model_directory+'/tokenizer.pickle', 'wb') as handle:
@@ -87,12 +110,11 @@ def train_mlp(TRAINING_SET, TEST_SET, BATCH_SIZE, VOCAB_SIZE, MAX_SEQUENCE_LENGT
     with open(model_directory+'/label_indexes.pickle', 'wb') as handle:
         pickle.dump(labels_index, handle, protocol=pickle.HIGHEST_PROTOCOL)
     #Skrive nøkkelparametere til tekstfil
-    with open(model_directory+'/stats.txt','w') as statsfile:
-        statsfile.write(str(MAX_SEQUENCE_LENGTH)+","+str(vocab_size))
+
 
     print("Modell ferdig trent og lagret i "+ model_directory)
     return model_directory
-def test_mlp(TEST_SET, MODEL_DIRECTORY, MAX_SEQUENCE_LENGTH,vocab_size):
+def test_mlp(TEST_SET, MODEL_DIRECTORY):
 
     #Loading model
     model = load_model(MODEL_DIRECTORY+'/model.bin')
@@ -104,23 +126,41 @@ def test_mlp(TEST_SET, MODEL_DIRECTORY, MAX_SEQUENCE_LENGTH,vocab_size):
     with open(MODEL_DIRECTORY + '/label_indexes.pickle', 'rb') as handle:
         labels_index = pickle.load(handle)
 
+    # Loading parameters like max_sequence_length, and vocabulary_size
+    with open(MODEL_DIRECTORY+'/model_stats', 'r') as params_file:
+        params_data = params_file.read()
 
-    x_test, y_test = fasttextTest2mlp(TEST_SET, MAX_SEQUENCE_LENGTH, vocab_size, tokenizer, labels_index)
+    re_max_seq_length = re.search('length:(.+?)\n', params_data)
+    if re_max_seq_length:
+            MAX_SEQUENCE_LENGTH = int(re_max_seq_length.group(1))
+    print(MAX_SEQUENCE_LENGTH)
+    re_vocab_size = re.search('size:(.+?)\n', params_data)
+    if re_vocab_size:
+        vocab_size = int(re_vocab_size.group(1))
+    print(vocab_size)
+
+    re_vectorization_type = re.search('type:(.+?)\n',params_data)
+    if re_vectorization_type:
+        vectorization_type = re_vectorization_type.group(1)
+    print(str(vectorization_type))
+    x_test, y_test = fasttextTest2mlp(TEST_SET, MAX_SEQUENCE_LENGTH, vocab_size, tokenizer, labels_index, VECTORIZATION_TYPE= vectorization_type)
 
 
     test_score,test_accuracy = evaluation(model,x_test,y_test, VERBOSE = 1)
     print('Test_score:', test_score)
     print('Test Accuracy', test_accuracy)
+
+    # Writing results to txt-file.
     with open(MODEL_DIRECTORY+"/result.txt",'a') as result_file:
         result_file.write('Test_score:'+ str(test_score)+ '\n'
                           'Test_accuracy:' + str(test_accuracy)+'\n')
 
     return test_score,test_accuracy
-def fasttextTrain2mlp(FASTTEXT_TRAIN_FILE,FASTTEXT_TEST_FILE,MAX_SEQUENCE_LENGTH, VOCAB_SIZE):
+def fasttextTrain2mlp(FASTTEXT_TRAIN_FILE,MAX_SEQUENCE_LENGTH, VOCAB_SIZE, VECTORIZATION_TYPE):
     '''Converting training_set from fasttext format to MLP-format'''
 
     dewey_train, text_train = get_articles(FASTTEXT_TRAIN_FILE)
-    dewey_test, text_test = get_articles(FASTTEXT_TEST_FILE)
+
 
     ## Preprocessing training_set
     labels_index = {}
@@ -138,7 +178,7 @@ def fasttextTrain2mlp(FASTTEXT_TRAIN_FILE,FASTTEXT_TEST_FILE,MAX_SEQUENCE_LENGTH
     tokenizer = Tokenizer(num_words= VOCAB_SIZE)
     tokenizer.fit_on_texts(text_train)
     sequences = tokenizer.texts_to_sequences(text_train)
-    sequence_matrix = tokenizer.sequences_to_matrix(sequences, mode = 'binary')
+    sequence_matrix = tokenizer.sequences_to_matrix(sequences, mode = VECTORIZATION_TYPE)
 
     data = pad_sequences(sequence_matrix, maxlen=MAX_SEQUENCE_LENGTH)
 
@@ -153,7 +193,7 @@ def fasttextTrain2mlp(FASTTEXT_TRAIN_FILE,FASTTEXT_TEST_FILE,MAX_SEQUENCE_LENGTH
 
     return x_train, y_train, tokenizer, num_classes,labels_index #x_test, y_test, num_classes
 
-def fasttextTest2mlp(FASTTEXT_TEST_FILE,MAX_SEQUENCE_LENGTH, VOCAB_SIZE, TRAIN_TOKENIZER, LABEL_INDEX_VECTOR):
+def fasttextTest2mlp(FASTTEXT_TEST_FILE,MAX_SEQUENCE_LENGTH, VOCAB_SIZE, TRAIN_TOKENIZER, LABEL_INDEX_VECTOR, VECTORIZATION_TYPE):
     # Preparing test data
     dewey_test, text_test = get_articles(FASTTEXT_TEST_FILE)
     test_labels = []
@@ -162,9 +202,8 @@ def fasttextTest2mlp(FASTTEXT_TEST_FILE,MAX_SEQUENCE_LENGTH, VOCAB_SIZE, TRAIN_T
        test_labels.append(LABEL_INDEX_VECTOR[dewey.strip()])
 
     test_sequences = TRAIN_TOKENIZER.texts_to_sequences(text_test)
-    test_sequence_matrix = TRAIN_TOKENIZER.sequences_to_matrix(test_sequences, mode = 'binary')
-    test_word_index = TRAIN_TOKENIZER.word_index
-    print('Found %s unique tokens.' % len(test_word_index))
+    test_sequence_matrix = TRAIN_TOKENIZER.sequences_to_matrix(test_sequences, mode = VECTORIZATION_TYPE)
+
     x_test = pad_sequences(test_sequence_matrix, maxlen=MAX_SEQUENCE_LENGTH)
     y_test = to_categorical(np.asarray(test_labels))
 
@@ -180,7 +219,7 @@ def evaluation(MODEL, X_TEST,Y_TEST, VERBOSE):
 def log_model_stats(model_stats_file_name, model_directory, training_set_name, training_set,
                  num_classes,vocab_size, max_sequence_length,
                 epochs, time_elapsed,
-                path_to_model, loss_model ):
+                path_to_model, loss_model, vectorization_type ):
     ''' Prints results and parameters to log-file.'''
 
     time_stamp = '{:%Y%m%d%H%M%S}'.format(datetime.datetime.now())
@@ -198,7 +237,8 @@ def log_model_stats(model_stats_file_name, model_directory, training_set_name, t
                       + "Antall deweys:" + str(num_classes) + '\n'
                       + "Antall docs i treningssett:" + str(len(training_set)) + '\n'
                       + "saved_model:" + path_to_model + '\n'
-                      + "loss_model:" + str(loss_model) + '\n' + '\n'
+                      + "loss_model:" + str(loss_model) + '\n'
+                      + "vectorization_type:" + vectorization_type+'\n'
                       )
     model_stats_file.close()
 
@@ -207,7 +247,7 @@ def log_model_stats(model_stats_file_name, model_directory, training_set_name, t
 
 
 def run_mlp_tests (training_set, test_set, save_model_folder,model_stats_file_name,
-                   batch_size,vocab_size_vector, sequence_length_vector, epoch_vector, loss_model):
+                   batch_size,vocab_size_vector, sequence_length_vector, epoch_vector, loss_model, vectorization_type):
 
     for vocab_test in vocab_size_vector:
         for sequence_length_test in sequence_length_vector:
@@ -216,7 +256,6 @@ def run_mlp_tests (training_set, test_set, save_model_folder,model_stats_file_na
 
 
                 MOD_DIR=train_mlp(TRAINING_SET = training_set,
-                        TEST_SET =test_set,
                         BATCH_SIZE=batch_size,
                         VOCAB_SIZE=vocab_test,
                         MAX_SEQUENCE_LENGTH =sequence_length_test,
@@ -224,17 +263,19 @@ def run_mlp_tests (training_set, test_set, save_model_folder,model_stats_file_na
                         FOLDER_TO_SAVE_MODEL=save_model_folder,
                         LOSS_MODEL= loss_model,
                         MODEL_STATS_FILE_NAME = model_stats_file_name,
+                        VECTORIZATION_TYPE= vectorization_type
                         )
 
                 print("Prosessen fortsetter")
-                try:
-                    test_mlp(test_set,MOD_DIR,sequence_length_test,vocab_test)
-                except TypeError:
-                     print("Noe gikk feil med testen")
+                # try:
+                #     test_mlp(test_set,MOD_DIR)
+                # except TypeError:
+                #      print("Noe gikk feil med testen")ar
 
 if __name__ == '__main__':
 
-    run_mlp_tests("corpus_w_wiki/data_set_100/combined100_training", "corpus_w_wiki/data_set_100/100_test",save_model_folder= "mlp/",
-                   model_stats_file_name= "model_stats",batch_size=64, vocab_size_vector=[5000], sequence_length_vector = [5000]
-                   ,epoch_vector = [10], loss_model = "categorical_crossentropy")
-    #test_mlp("corpus_w_wiki/data_set_100/100_test","mlp/mlp-5000-5000-10-201711081658",5000,5000)
+    run_mlp_tests(training_set="corpus_w_wiki/data_set_100/combined100_training", test_set="corpus_w_wiki/data_set_100/100_test",save_model_folder= "mlp/",
+                     model_stats_file_name= "model_stats",batch_size=64, vocab_size_vector=[5000], sequence_length_vector = [5000]
+                    ,epoch_vector = [10], loss_model = "categorical_crossentropy", vectorization_type = 'binary')
+    #
+    test_mlp(TEST_SET="corpus_w_wiki/data_set_100/100_test",MODEL_DIRECTORY="mlp/mlp-5000-5000-10-201711091109")
