@@ -99,12 +99,13 @@ def train_mlp(TRAINING_SET, BATCH_SIZE, VOCAB_SIZE, MAX_SEQUENCE_LENGTH,EPOCHS, 
     save_model_path = model_directory+"/model.bin"
     model.save(save_model_path)
 
-    #Lagre test-fil
+
     time_elapsed = time.time() - start_time
+    # Skrive nøkkelparametere til tekstfil
     log_model_stats(MODEL_STATS_FILE_NAME, model_directory,TRAINING_SET,x_train
                 ,num_classes, vocab_size, MAX_SEQUENCE_LENGTH
                 , EPOCHS, time_elapsed, save_model_path,
-                    LOSS_MODEL, VECTORIZATION_TYPE,VALIDATION_SPLIT)
+                    LOSS_MODEL, VECTORIZATION_TYPE,VALIDATION_SPLIT, word2vec= None)
 
     #Lagre tokenizer
     with open(model_directory+'/tokenizer.pickle', 'wb') as handle:
@@ -112,7 +113,7 @@ def train_mlp(TRAINING_SET, BATCH_SIZE, VOCAB_SIZE, MAX_SEQUENCE_LENGTH,EPOCHS, 
     #Lagre label_indexes
     with open(model_directory+'/label_indexes.pickle', 'wb') as handle:
         pickle.dump(labels_index, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    #Skrive nøkkelparametere til tekstfil
+
 
 
     print("Modell ferdig trent og lagret i "+ model_directory)
@@ -223,7 +224,7 @@ def evaluation(MODEL, X_TEST,Y_TEST, VERBOSE):
 def log_model_stats(model_stats_file_name, model_directory, training_set_name, training_set,
                  num_classes,vocab_size, max_sequence_length,
                 epochs, time_elapsed,
-                path_to_model, loss_model, vectorization_type, validation_split ):
+                path_to_model, loss_model, vectorization_type, validation_split, word2vec ):
     ''' Prints model parameters to log-file.'''
 
     time_stamp = '{:%Y%m%d%H%M%S}'.format(datetime.datetime.now())
@@ -242,8 +243,9 @@ def log_model_stats(model_stats_file_name, model_directory, training_set_name, t
                       + "Antall docs i treningssett:" + str(len(training_set)) + '\n'
                       + "saved_model:" + path_to_model + '\n'
                       + "loss_model:" + str(loss_model) + '\n'
-                      + "vectorization_type:" + vectorization_type+'\n'
+                      + "vectorization_type:" + str(vectorization_type)+'\n'
                       + "Validation_split:" + str(validation_split) + '\n'
+                      + "word2vec:" + str(word2vec)+'\n'
                       )
     model_stats_file.close()
 
@@ -275,13 +277,15 @@ def run_mlp_tests (training_set, test_set, save_model_folder,model_stats_file_na
                 print("Setter igang test")
                 try:
                      test_mlp(test_set,MOD_DIR)
-                except TypeError:
-                      print("Noe gikk feil med testen")
+                except ValueError:
+
+                      print("Noe gikk feil med testen, prøver på nytt")
+                      test_mlp(test_set, MOD_DIR)
 
 if __name__ == '__main__':
 
     run_mlp_tests(training_set="corpus_w_wiki/data_set_100/combined100_training", test_set="corpus_w_wiki/data_set_100/100_test",save_model_folder= "mlp/",
                      model_stats_file_name= "model_stats",batch_size=64, vocab_size_vector=[5000], sequence_length_vector = [5000]
-                    ,epoch_vector = [10], loss_model = "categorical_crossentropy", vectorization_type = 'binary',validation_split= 0.2)
+                    ,epoch_vector = [10], loss_model = "categorical_crossentropy", vectorization_type = 'binary',validation_split= None)
 
     test_mlp(TEST_SET="corpus_w_wiki/data_set_100/100_test",MODEL_DIRECTORY="mlp/mlp-5000-5000-10-201711091157")

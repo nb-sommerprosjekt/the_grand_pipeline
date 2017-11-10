@@ -5,3 +5,9 @@ __pycache__/*
 tgc/*
 tgc_wiki/*
 corpus.tar.gz
+*corpus_w_wiki
+mlp/*
+artificial_corpus*
+.idea*
+w2v_tgc/*
+cnn/*
