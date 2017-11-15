@@ -4,4 +4,9 @@ data_set/*
 __pycache__/*
 tgc/*
 tgc_wiki/*
-corpus.tar.gz
+corpus.tar.gZ
+fasttext/*
+test_run_training.txt
+test_run_test.txt
+training_file.txt
+wiki.no.vec
