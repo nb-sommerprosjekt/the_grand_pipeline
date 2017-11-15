@@ -28,6 +28,10 @@ lr_update:::
 loss:::
 wiki_vec:::False (default:::False)
 word_window:::5 (default:::5  range:::1:10)
+fasttext_k:::1,5,10
+save_model:::True  (default:::True)
+fasttext_run_name:::new_default  (string)
+
 
 #cnn:
 

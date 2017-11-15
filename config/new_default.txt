@@ -1,23 +1,23 @@
 #config-file: 
 
 #preprocessing:	
-name_corpus:::new_corpus
-stemming:::False 
+name_corpus:::test_onsdag
+stemming:::True
 sentences:::False
 stop_words:::True
 extra_functions:::False
-lower_case:::True  	
+lower_case:::True
 
 
 #split_training_test
-test_ratio:::0.2
+test_ratio:::0.20
 
 
 #process_training:
 article_size:::500
 create_fake:::True
-wikipedia:::True
-minimum_articles:::1
+wikipedia:::False
+minimum_articles:::200
 dewey_digits:::3
 
 #model_parameters:
@@ -26,8 +26,11 @@ dewey_digits:::3
 epochs:::75
 lr:::0.3
 lr_update:::98
-loss:::hs	
-wiki_vec:::False
+loss:::hs,softmax
+wiki_vec:::True
 word_window:::5
+fasttext_k:::1,5,10
+save_model:::False
+fasttext_run_name:::test_onsdag
 
 #cnn:

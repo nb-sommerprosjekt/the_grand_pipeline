@@ -10,6 +10,8 @@ from nltk.corpus import stopwords
 from nltk.stem import snowball
 from nltk.tokenize import word_tokenize
 from numpy import array_split
+from fast_text import train_fasttext_models
+import sys
 
 def load_config(config_file):
     print("Loading config file: {}".format(config_file))
@@ -24,15 +26,18 @@ def load_config(config_file):
                     if temp[1] is int:
                         config[temp[0]]=int(temp[1])
                     else:
-                        config[temp[0]]=temp[1]
+                        if len(temp[1].split(","))>1:
+                            config[temp[0]]=temp[1].split(",")
+                        else:
+                            config[temp[0]] = temp[1]
     print("Config-file loaded")
     return config
 
 def preprocess(corpus_name,stemming, stop_words,sentences,lower_case,extra_functions):
     counter=0
     rootdir="tgc"
-    corpus_name_folder="data_set/"+corpus_name+"_folder"
-    corpus_name_location=corpus_name_folder+"/"+corpus_name
+    corpus_name_folder=os.path.join("data_set",corpus_name+"_folder")
+    corpus_name_location=os.path.join(corpus_name_folder,corpus_name)
 
     if not os.path.exists(corpus_name_folder):
         os.makedirs(corpus_name_folder)
@@ -133,9 +138,9 @@ def preprocess_wiki(corpus_folder,wiki_corpus_name,stemming, stop_words, sentenc
 
 def split_to_training_and_test(corpus_folder,corpus_name, test_ratio,dewey_digits):
     print("Splitting to training and test:")
-    training_folder= corpus_folder +"/"+corpus_name+"_training"
-    test_folder= corpus_folder +"/"+corpus_name+"_test"
-    corpus_name_location=corpus_folder +"/"+corpus_name
+    training_folder= os.path.join(corpus_folder,corpus_name+"_training")
+    test_folder= os.path.join(corpus_folder,corpus_name+"_test")
+    corpus_name_location=os.path.join(corpus_folder ,corpus_name)
 
     dewey_dict={}
 
@@ -232,22 +237,22 @@ def split_articles(folder, article_length):
 
     for subdir, dirs, files in os.walk(folder):
         for file in files:
-            f = open(os.path.join(folder, file), "r+")
-            text=f.read()
+            with  open(os.path.join(folder, file), "r+")as f:
+                text=f.read()
             text= text.split(" ")
             dewey = text[0].replace("__label__", "")
             text=" ".join(text[1:])
-            print(dewey)
+            #print(dewey)
 
             texts=split_text(text,article_length)
             for i,text in enumerate(texts):
 
                 temp = list(text)
                 text=" ".join(temp)
-                print(i, len(text))
-                print(os.path.join(folder_split,file[:-4]+"_"+str(i)+file[-4:]))
-                f =open(os.path.join(folder_split,file[:-4]+"_"+str(i)+file[-4:]),"w+")
-                f.write("__label__"+dewey+" "+str(text))
+                #print(i, len(text))
+                #print(os.path.join(folder_split,file[:-4]+"_"+str(i)+file[-4:]))
+                with open(os.path.join(folder_split,file[:-4]+"_"+str(i)+file[-4:]),"w+") as f:
+                    f.write("__label__"+dewey+" "+str(text))
 
 
     return folder_split
@@ -269,8 +274,10 @@ def remove_unecessary_articles(training_folder_split,corpus_folder,minimum_artic
 
     for subdir, dirs, files in os.walk(training_folder_split):
         for file in files:
-            f = open(os.path.join(training_folder_split, file), "r+")
-            text = f.read()
+            with open(os.path.join(training_folder_split, file), "r+") as f:
+                f.seek(0)
+                text = f.read()
+                f.close()
 
             dewey = text.split(" ")[0].replace("__label__", "")
             dewey = dewey.replace(".", "")
@@ -290,17 +297,24 @@ def remove_unecessary_articles(training_folder_split,corpus_folder,minimum_artic
         else:
             for file in dewey_dict[key]:
                 valid_deweys.add(key)
-                f = open(os.path.join(training_folder_split, file), "r+")
-                text = f.read()
-                text = text.split(" ")
-                dewey = text[0].replace("__label__", "")
-                text = " ".join(text[1:])
+                with open(os.path.join(training_folder_split, file), "r+") as f2:
+                    f2.seek(0)
+                    text = f2.read()
+                    temp1=len(text)
+                    text = text.split(" ")
+                    dewey = text[0].replace("__label__", "")
+                    text = " ".join(text[1:])
+                    temp2=len(text)
 
-                if len(dewey) > dewey_digits:
-                    dewey = dewey[:dewey_digits]
-                f.write("__label__" + dewey + " " + str(text))
+                    if len(dewey) > dewey_digits:
+                        dewey = dewey[:dewey_digits]
+                    with open(os.path.join(training_folder_split, file), "r+") as f3:
+                        f3.seek(0)
+                        f3.write("__label__" + dewey + " " + str(text))
+                        f3.truncate()
+                        f3.close()
 
-
+    print("Removed unnecessary dewey numbers. There are {} unique dewey numbers in the training set.".format(len(valid_deweys)))
     return rubbish_folder,valid_deweys
 
 
@@ -314,52 +328,51 @@ def prep_test_set(test_folder,valid_deweys,article_length,dewey_digits):
     for subdir, dirs, files in os.walk(test_folder_split):
         for file in files:
             #print(len(files))
-            f = open(os.path.join(test_folder_split, file), "r+")
-            text = f.read()
+            with open(os.path.join(test_folder_split, file), "r+") as f:
+                text = f.read()
+                text=text.split(" ")
+                dewey = text[0].replace("__label__", "")
+                text=" ".join(text[1:])
+                dewey = dewey.replace(".", "")
+                if len(dewey) > int(dewey_digits):
+                    dewey = dewey[:dewey_digits]
+                    #print(dewey)
+                #print(dewey)
+                if dewey in valid_deweys:
 
-            dewey = text.split(" ")[0].replace("__label__", "")
-            dewey = dewey.replace(".", "")
-            if len(dewey) > int(dewey_digits):
-                dewey = dewey[:dewey_digits]
-                print(dewey)
-            print(dewey)
-            if dewey in valid_deweys:
-
-                print("Not thrash")
-                f.write("__label__" + dewey + " " + str(text))
-            else:
-                os.rename(os.path.join(test_folder_split, file), os.path.join(rubbish_folder, file))
+                    #print("Not thrash")
+                    f.seek(0)
+                    f.write("__label__" + dewey + " " + str(text))
+                    f.truncate()
+                else:
+                    os.rename(os.path.join(test_folder_split, file), os.path.join(rubbish_folder, file))
+    return test_folder_split
 
 
 
 
 
-def load_set(folder,name):
-
-    label_file = open(name + '.txt', 'w')
+def load_set(folder):
+    print("Loading {} now".format(folder))
     total_tekst = ""
-    tidsskrifter = {}
     counter = 0
 
     for subdir, dirs, files in os.walk(folder):
         for file in files:
-            counter += 1
+
             if counter % 1000 == 0:
                 print("Done {} out of {}".format(counter, len(files)))
-            f = open(os.path.join(folder, file), "r+")
-            text = f.read()
-            text = text.split(" ")
-            dewey = text[0].replace("__label__", "")
-            dewey = dewey.replace(".", "")
-            if len(dewey) > siffer:
-                dewey = dewey[:siffer]
-            text = " ".join(text[1:])
-            total_tekst += "__label__" + dewey + " " + text + '\n'
-            # total_tekst+='__label__'+found+' '+tekst2+'\n'
-            # with open('tekst_og_tidsskrift2.pickle', 'wb') as f:
-            #     pickle.dump(tidsskrifter, f)
-    label_file.write(total_tekst)
+            counter += 1
+            with open(os.path.join(folder, file), "r+") as f:
+                f.seek(0)
+                text = f.read()
+            total_tekst +=  text + '\n'
     return total_tekst
+
+def create_folder(path):
+    os.makedirs(path, exist_ok=True)
+
+
 
 # def fix_corpus(folder, name_of_new_folder):
 #
@@ -379,12 +392,17 @@ if __name__ == '__main__':
 
     # fix_corpus("corpus","corpus2")
     # exit(0)
-    config=load_config("new_default")
+    print("Trying to load config-file named: {}".format(sys.argv[1]))
+    config=load_config(sys.argv[1])
 
     corpus_folder=preprocess(config["name_corpus"], config["stemming"], config["stop_words"],config["sentences"], config["lower_case"], config["extra_functions"])
     wiki_corpus_folder=preprocess_wiki(corpus_folder,config["name_corpus"]+"_wiki", config["stemming"], config["stop_words"], config["sentences"],config["lower_case"], config["extra_functions"])
     training_folder, test_folder=split_to_training_and_test(corpus_folder, config["name_corpus"],0.2,3)
     if config["wikipedia"]:
+        wiki_corpus_folder = preprocess_wiki(corpus_folder, config["name_corpus"] + "_wiki", config["stemming"],
+                                             config["stop_words"], config["sentences"], config["lower_case"],
+                                             config["extra_functions"])
+
         add_wiki_to_training(wiki_corpus_folder,training_folder)
     #load_config_file
 
@@ -392,7 +410,14 @@ if __name__ == '__main__':
 
     rubbish_folder,valid_deweys=remove_unecessary_articles(training_folder_split,corpus_folder,config["minimum_articles"],config["dewey_digits"])
     #print(valid_deweys)
-    prep_test_set(test_folder,valid_deweys,config["article_size"],config["dewey_digits"])
+    test_folder_split=prep_test_set(test_folder,valid_deweys,config["article_size"],config["dewey_digits"])
+
+    test_text=load_set(test_folder_split)
+    training_text=load_set(training_folder_split)
+
+    create_folder(os.path.join("fasttext",config["fasttext_run_name"]))
+    train_fasttext_models(training_text,test_text,os.path.join("fasttext",config["fasttext_run_name"]),config["epochs"],config["lr"],config["lr_update"],config["word_window"],config["loss"],config["wiki_vec"],config["fasttext_k"],config["minimum_articles"],config["save_model"])
+
 
     #preprocess function
     #result is FT-format-file
