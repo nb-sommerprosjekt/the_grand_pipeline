@@ -58,7 +58,10 @@ def train_mlp(TRAINING_SET, BATCH_SIZE, VOCAB_SIZE, MAX_SEQUENCE_LENGTH,EPOCHS, 
 
     ## Preprocessing
     vocab_size =VOCAB_SIZE
-
+    VALIDATION_SPLIT=float(VALIDATION_SPLIT)
+    EPOCHS=int(EPOCHS)
+    BATCH_SIZE=int(BATCH_SIZE)
+    VOCAB_SIZE=int(VOCAB_SIZE)
 
     x_train, y_train, tokenizer, num_classes, labels_index = fasttextTrain2mlp(TRAINING_SET, MAX_SEQUENCE_LENGTH, vocab_size,VECTORIZATION_TYPE, folder = False)
 
@@ -140,16 +143,16 @@ def test_mlp(TEST_SET, MODEL_DIRECTORY, k_output_labels):
     re_max_seq_length = re.search('length:(.+?)\n', params_data)
     if re_max_seq_length:
             MAX_SEQUENCE_LENGTH = int(re_max_seq_length.group(1))
-            print(MAX_SEQUENCE_LENGTH)
+            print("Max sequence length:{}".format(MAX_SEQUENCE_LENGTH))
     re_vocab_size = re.search('size:(.+?)\n', params_data)
     if re_vocab_size:
         vocab_size = int(re_vocab_size.group(1))
-        print(vocab_size)
+        print("Vocabulary size: {}".format(vocab_size))
 
     re_vectorization_type = re.search('type:(.+?)\n',params_data)
     if re_vectorization_type:
         vectorization_type = re_vectorization_type.group(1)
-        print(str(vectorization_type))
+        print("This utilizes the vectorization: {}".format(str(vectorization_type)))
     x_test, y_test = fasttextTest2mlp(TEST_SET, MAX_SEQUENCE_LENGTH, vocab_size, tokenizer, labels_index, VECTORIZATION_TYPE= vectorization_type)
 
 
@@ -181,9 +184,9 @@ def fasttextTrain2mlp(FASTTEXT_TRAIN_FILE,MAX_SEQUENCE_LENGTH, VOCAB_SIZE, VECTO
         labels_index[dewey] = label_id
     for dewey in dewey_train:
         labels.append(labels_index[dewey])
-    print(len(labels_index))
-    print(labels_index)
-    print(len(labels))
+    print("length of labels indexes: {} ".format(len(labels_index)))
+    #print(labels_index)
+    print("Length of labels:{}".format(len(labels)))
     num_classes = len(set(dewey_train))
     #Preparing_training_set
     tokenizer = Tokenizer(num_words= VOCAB_SIZE)
@@ -238,7 +241,7 @@ def prediction(MODEL,X_TEST,k_preds, label_indexes):
 
             all_topk_labels.append(topk_labels)
         #print(len(topk_labels))
-    print(all_topk_labels)
+    #print(all_topk_labels)
 
     return all_topk_labels
 def evaluation(MODEL, X_TEST,Y_TEST, VERBOSE):
@@ -284,6 +287,23 @@ def log_model_stats(model_directory, training_set_name, training_set,
 
 def run_mlp_tests (training_set, test_set, save_model_folder,
                    batch_size,vocab_size_vector, sequence_length_vector, epoch_vector, loss_model, vectorization_type, validation_split, k_output_labels):
+
+    if isinstance(vocab_size_vector,str):
+        vocab_size_vector=[int(vocab_size_vector)]
+    else:
+        vocab_size_vector= list(map(int, vocab_size_vector))
+
+    if isinstance(sequence_length_vector,str):
+        sequence_length_vector=[int(sequence_length_vector)]
+    else:
+        sequence_length_vector= list(map(int, sequence_length_vector))
+
+    if isinstance(vocab_size_vector,str):
+        epoch_vector=[int(epoch_vector)]
+    else:
+        epoch_vector= list(map(int, epoch_vector))
+    k_output_labels=int(k_output_labels)
+
 
     '''Function for running test and training with different combinations of vocab_size, sequence_lenghts and epochs'''
     for vocab_test in vocab_size_vector:

@@ -399,5 +399,5 @@ if __name__ == '__main__':
 
     create_folder(os.path.join("fasttext",config["fasttext_run_name"]))
     #train_fasttext_models(training_text,test_text,os.path.join("fasttext",config["fasttext_run_name"]),config["epochs"],config["lr"],config["lr_update"],config["word_window"],config["loss"],config["wiki_vec"],config["fasttext_k"],config["minimum_articles"],config["dewey_digits"],config["save_model"])
-    run_mlp_tests(training_file,test_file,"mlp",500,[10000],[1000],[10],"mean_squared_error","count",0.2)
+    run_mlp_tests(training_file,test_file,config["mlp_save_model_folder"],config["mlp_batch_size"],config["mlp_vocab_size_vector"],config["mlp_sequence_length_vector"],config["mlp_epoch_vector"],config["mlp_loss_model"],config["mlp_vectorization_type"],config["mlp_validation_split"],config["mlp_k_labels"])
 

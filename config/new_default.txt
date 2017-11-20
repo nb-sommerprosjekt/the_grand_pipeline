@@ -34,12 +34,13 @@ save_model:::False
 fasttext_run_name:::test_onsdag
 
 #mlp:
-mlp_epoch_vector::: [10]
-mlp_save_model_folder:::mlp/
+mlp_epoch_vector:::10,20
+mlp_save_model_folder:::mlp
 model_stats_file_name:::model_stats
 mlp_batch_size:::64
-mlp_vocab_size_vector:::[5000]
-mlp_sequence_lenght_vector:::[5000]
+mlp_vocab_size_vector:::5000,1000
+mlp_sequence_length_vector:::5000,10000
 mlp_loss_model:::categorical_crossentropy
 mlp_vectorization_type:::binary
-mlp_validation_split:::None
+mlp_validation_split:::0.1
+mlp_k_labels:::3

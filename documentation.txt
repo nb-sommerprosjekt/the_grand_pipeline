@@ -38,9 +38,21 @@ fasttext_run_name:::new_default  (string)
 
 MLP:
 
-mode: one of "binary", "count", "tfidf", "freq" (default: "binary").
+mode: one of 
 
-loss funksjons:  https://keras.io/losses/
+loss funksjons:  
+
+#mlp:
+mlp_epoch_vector:::10
+mlp_save_model_folder:::mlp
+model_stats_file_name:::model_stats
+mlp_batch_size:::64
+mlp_vocab_size_vector:::5000,1000
+mlp_sequence_length_vector:::5000,10000
+mlp_loss_model:::categorical_crossentropy (https://keras.io/losses/)
+mlp_vectorization_type:::binary ("binary", "count", "tfidf", "freq" (default: "binary").)
+mlp_validation_split:::None
+mlp_k_labels:::3
 
 
 
