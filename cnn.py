@@ -108,9 +108,9 @@ def train_cnn(training_set, VOCAB_SIZE, MAX_SEQUENCE_LENGTH,EPOCHS, FOLDER_TO_SA
 
     TIME_ELAPSED = time.time() - start_time
 
-    MODEL_STATS_FILE_NAME ="model_stats"
+
     save_model_path = model_directory+"/model.bin"
-    MLP.log_model_stats(model_stats_file_name = MODEL_STATS_FILE_NAME , model_directory = model_directory , training_set_name = training_set
+    MLP.log_model_stats(model_directory = model_directory , training_set_name = training_set
                          ,training_set = x_train,num_classes = num_classes, vocab_size = VOCAB_SIZE,
                          max_sequence_length= MAX_SEQUENCE_LENGTH, epochs=EPOCHS, time_elapsed = TIME_ELAPSED,
                          path_to_model= save_model_path, loss_model =loss_model,  vectorization_type= None,
@@ -127,7 +127,7 @@ def train_cnn(training_set, VOCAB_SIZE, MAX_SEQUENCE_LENGTH,EPOCHS, FOLDER_TO_SA
     with open(model_directory+'/label_indexes.pickle', 'wb') as handle:
         pickle.dump(labels_index, handle, protocol=pickle.HIGHEST_PROTOCOL)
     return model_directory
-def cnn_pred(test_set, mod_dir):
+def cnn_pred(test_set, mod_dir, k_top_labels):
     '''Test module for CNN'''
     dewey_test, text_test = MLP.get_articles(test_set)
     #Loading model
@@ -175,14 +175,14 @@ def cnn_pred(test_set, mod_dir):
     test_score, test_accuracy = model.evaluate(x_test, y_test, batch_size= 64, verbose=1)
     print('Test_score:', str(test_score))
     print('Test Accuracy', str(test_accuracy))
-
+    predictions = MLP.prediction(model, x_test, k_top_labels,labels_index )
     # Writing results to txt-file.
     with open(mod_dir+"/result.txt",'a') as result_file:
         result_file.write('test_set:'+test_set+'\n'+
                           'Test_score:'+ str(test_score)+ '\n'
                           'Test_accuracy:' + str(test_accuracy)+'\n\n')
-
-def run_cnn_tests(TRAINING_SET, TEST_SET, VOCAB_VECTOR, SEQUENCE_LENGTH_VECTOR, EPOCHS, FOLDER_TO_SAVE_MODEL, LOSS_MODEL,  validation_split, word2vec_model):
+    return predictions
+def run_cnn_tests(TRAINING_SET, TEST_SET, VOCAB_VECTOR, SEQUENCE_LENGTH_VECTOR, EPOCHS, FOLDER_TO_SAVE_MODEL, LOSS_MODEL,  validation_split, word2vec_model, k_top_labels):
     '''Module for running test sequences with different parameters.'''
     for vocab_test in VOCAB_VECTOR:
         for sequence_length_test in SEQUENCE_LENGTH_VECTOR:
@@ -196,13 +196,19 @@ def run_cnn_tests(TRAINING_SET, TEST_SET, VOCAB_VECTOR, SEQUENCE_LENGTH_VECTOR, 
                     VALIDATION_SPLIT= validation_split,
                     word2vec_file_name= word2vec_model
                     )
-                cnn_pred(TEST_SET, test_mod_dir)
+                try:
+                    cnn_pred(TEST_SET, test_mod_dir, k_top_labels)
+                except ValueError:
+
+                        print("Noe gikk galt, prøver gjenkjenning på nytt.")
+                        cnn_pred(TEST_SET, test_mod_dir, k_top_labels)
+
 if __name__ == '__main__':
     vocab_vector = [5000]
     sequence_length_vector = [5000]
     epoch_vector = [1]
     run_cnn_tests(TRAINING_SET= "corpus_w_wiki/data_set_100/combined100_training", TEST_SET= "corpus_w_wiki/data_set_100/100_test", VOCAB_VECTOR=vocab_vector
                    , SEQUENCE_LENGTH_VECTOR= sequence_length_vector,EPOCHS= epoch_vector, FOLDER_TO_SAVE_MODEL = "cnn/",
-                   LOSS_MODEL= "categorical_crossentropy", validation_split= 'None', word2vec_model ="w2v_tgc/full.bin")
+                   LOSS_MODEL= "categorical_crossentropy", validation_split= 'None', word2vec_model ="w2v_tgc/full.bin", k_top_labels = 5)
 
-    #cnn_pred("corpus_w_wiki/data_set_100/100_test", 'cnn/cnn-5000-5000-1-20171110120427')
+    #cnn_pred("corpus_w_wiki/data_set_100/100_test", 'cnn/cnn-5000-5000-10-20171110130602', 5)

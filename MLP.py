@@ -51,7 +51,7 @@ def get_articles_from_folder(folder):
 
 
 
-def train_mlp(TRAINING_SET, BATCH_SIZE, VOCAB_SIZE, MAX_SEQUENCE_LENGTH,EPOCHS, FOLDER_TO_SAVE_MODEL, LOSS_MODEL, MODEL_STATS_FILE_NAME,VECTORIZATION_TYPE, VALIDATION_SPLIT):
+def train_mlp(TRAINING_SET, BATCH_SIZE, VOCAB_SIZE, MAX_SEQUENCE_LENGTH,EPOCHS, FOLDER_TO_SAVE_MODEL, LOSS_MODEL, VECTORIZATION_TYPE, VALIDATION_SPLIT):
     '''Training model'''
 
     start_time = time.time()
@@ -60,7 +60,7 @@ def train_mlp(TRAINING_SET, BATCH_SIZE, VOCAB_SIZE, MAX_SEQUENCE_LENGTH,EPOCHS, 
     vocab_size =VOCAB_SIZE
 
 
-    x_train, y_train, tokenizer, num_classes, labels_index = fasttextTrain2mlp(TRAINING_SET, MAX_SEQUENCE_LENGTH, vocab_size,VECTORIZATION_TYPE)
+    x_train, y_train, tokenizer, num_classes, labels_index = fasttextTrain2mlp(TRAINING_SET, MAX_SEQUENCE_LENGTH, vocab_size,VECTORIZATION_TYPE, folder = False)
 
     ####Preparing test_set
 
@@ -102,7 +102,7 @@ def train_mlp(TRAINING_SET, BATCH_SIZE, VOCAB_SIZE, MAX_SEQUENCE_LENGTH,EPOCHS, 
 
     time_elapsed = time.time() - start_time
     # Skrive nøkkelparametere til tekstfil
-    log_model_stats(MODEL_STATS_FILE_NAME, model_directory,TRAINING_SET,x_train
+    log_model_stats(model_directory,TRAINING_SET,x_train
                 ,num_classes, vocab_size, MAX_SEQUENCE_LENGTH
                 , EPOCHS, time_elapsed, save_model_path,
                     LOSS_MODEL, VECTORIZATION_TYPE,VALIDATION_SPLIT, word2vec= None)
@@ -118,7 +118,7 @@ def train_mlp(TRAINING_SET, BATCH_SIZE, VOCAB_SIZE, MAX_SEQUENCE_LENGTH,EPOCHS, 
 
     print("Modell ferdig trent og lagret i "+ model_directory)
     return model_directory
-def test_mlp(TEST_SET, MODEL_DIRECTORY):
+def test_mlp(TEST_SET, MODEL_DIRECTORY, k_output_labels):
     '''Test module for MLP'''
 
     #Loading model
@@ -152,21 +152,25 @@ def test_mlp(TEST_SET, MODEL_DIRECTORY):
 
 
     test_score,test_accuracy = evaluation(model,x_test,y_test, VERBOSE = 1)
+
+    predictions = prediction(model, x_test, k_output_labels, labels_index)
+
     print('Test_score:', test_score)
     print('Test Accuracy', test_accuracy)
-
     # Writing results to txt-file.
     with open(MODEL_DIRECTORY+"/result.txt",'a') as result_file:
         result_file.write('test_set:'+TEST_SET+'\n'+
                           'Test_score:'+ str(test_score)+ '\n'
                           'Test_accuracy:' + str(test_accuracy)+'\n\n')
 
-    return test_score,test_accuracy
+    return predictions
 
-def fasttextTrain2mlp(FASTTEXT_TRAIN_FILE,MAX_SEQUENCE_LENGTH, VOCAB_SIZE, VECTORIZATION_TYPE):
+def fasttextTrain2mlp(FASTTEXT_TRAIN_FILE,MAX_SEQUENCE_LENGTH, VOCAB_SIZE, VECTORIZATION_TYPE, folder):
     '''Converting training_set from fasttext format to MLP-format'''
-
-    dewey_train, text_train = get_articles(FASTTEXT_TRAIN_FILE)
+    if folder ==False:
+        dewey_train, text_train = get_articles(FASTTEXT_TRAIN_FILE)
+    else:
+        text_names, dewey_train, text_train = get_articles_from_folder(FASTTEXT_TRAIN_FILE)
 
     labels_index = {}
     labels = []
@@ -214,14 +218,36 @@ def fasttextTest2mlp(FASTTEXT_TEST_FILE,MAX_SEQUENCE_LENGTH, VOCAB_SIZE, TRAIN_T
 
     return  x_test, y_test
 
+def prediction(MODEL,X_TEST,k_preds, label_indexes):
+    predictions = MODEL.predict(x=X_TEST)
+
+    all_topk_labels = []
+    for prediction_array in predictions:
+        np_prediction = np.argsort(-prediction_array)[:k_preds]
+        #print(list(np_prediction))
+        topk_labels = []
+        for np_pred in np_prediction:
+
+            for label_name, label_index in label_indexes.items():
+
+                if label_index == np_pred:
+                    label = label_name
+                    topk_labels.append(label)
+
+            all_topk_labels.append(topk_labels)
+        #print(len(topk_labels))
+    print(all_topk_labels)
+
+    return all_topk_labels
 def evaluation(MODEL, X_TEST,Y_TEST, VERBOSE):
         '''Evaluates model. Return accuracy and score'''
         score = MODEL.evaluate(X_TEST, Y_TEST, VERBOSE)
         test_score = score[0]
         test_accuracy = score[1]
+
         return  test_score, test_accuracy
 
-def log_model_stats(model_stats_file_name, model_directory, training_set_name, training_set,
+def log_model_stats(model_directory, training_set_name, training_set,
                  num_classes,vocab_size, max_sequence_length,
                 epochs, time_elapsed,
                 path_to_model, loss_model, vectorization_type, validation_split, word2vec ):
@@ -232,7 +258,7 @@ def log_model_stats(model_stats_file_name, model_directory, training_set_name, t
     if not os.path.exists(model_directory):
         os.makedirs(model_directory)
 
-    model_stats_file = open(model_directory+"/"+model_stats_file_name, "a")
+    model_stats_file = open(model_directory+"/model_stats", "a")
     model_stats_file.write("Time:" + str(time_stamp) + '\n'
                       + "Time elapsed: " + str(time_elapsed) + '\n'
                       + "Training set:" + training_set_name + "\n"
@@ -253,8 +279,8 @@ def log_model_stats(model_stats_file_name, model_directory, training_set_name, t
 
 
 
-def run_mlp_tests (training_set, test_set, save_model_folder,model_stats_file_name,
-                   batch_size,vocab_size_vector, sequence_length_vector, epoch_vector, loss_model, vectorization_type, validation_split):
+def run_mlp_tests (training_set, test_set, save_model_folder,
+                   batch_size,vocab_size_vector, sequence_length_vector, epoch_vector, loss_model, vectorization_type, validation_split, k_output_labels):
     '''Function for running test and training with different combinations of vocab_size, sequence_lenghts and epochs'''
     for vocab_test in vocab_size_vector:
         for sequence_length_test in sequence_length_vector:
@@ -269,23 +295,22 @@ def run_mlp_tests (training_set, test_set, save_model_folder,model_stats_file_na
                         EPOCHS=epoch_test,
                         FOLDER_TO_SAVE_MODEL=save_model_folder,
                         LOSS_MODEL= loss_model,
-                        MODEL_STATS_FILE_NAME = model_stats_file_name,
                         VECTORIZATION_TYPE= vectorization_type,
                         VALIDATION_SPLIT = validation_split
                         )
 
                 print("Setter igang test")
                 try:
-                     test_mlp(test_set,MOD_DIR)
+                     test_mlp(test_set,MOD_DIR, k_output_labels)
                 except ValueError:
 
                       print("Noe gikk feil med testen, prøver på nytt")
-                      test_mlp(test_set, MOD_DIR)
+                      test_mlp(test_set, MOD_DIR, k_output_labels= k_output_labels)
 
 if __name__ == '__main__':
 
-    run_mlp_tests(training_set="corpus_w_wiki/data_set_100/combined100_training", test_set="corpus_w_wiki/data_set_100/100_test",save_model_folder= "mlp/",
-                     model_stats_file_name= "model_stats",batch_size=64, vocab_size_vector=[5000], sequence_length_vector = [5000]
-                    ,epoch_vector = [10], loss_model = "categorical_crossentropy", vectorization_type = 'binary',validation_split= None)
+    run_mlp_tests(training_set="corpus_w_wiki/data_set_100/combined100_training", test_set="corpus_w_wiki/data_set_100/100_test",save_model_folder= "mlp/"
+                  ,batch_size=64, vocab_size_vector=[5000], sequence_length_vector = [600]
+                  ,epoch_vector = [50], loss_model = "categorical_crossentropy", vectorization_type = 'binary',validation_split= 0.20, k_output_labels = 3)
 
-    test_mlp(TEST_SET="corpus_w_wiki/data_set_100/100_test",MODEL_DIRECTORY="mlp/mlp-5000-5000-10-201711091157")
+    test_mlp(TEST_SET="corpus_w_wiki/data_set_100/100_test",MODEL_DIRECTORY="mlp/mlp-5000-5000-10-201711091157", k_output_labels= 10)
