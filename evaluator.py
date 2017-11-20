@@ -48,21 +48,28 @@ def evaluate_fasttext(test_file,classifier):
             #
             #     print(texts[i])
     sorted_acc = sorted(accuracy.items(), key=operator.itemgetter(1), reverse=True)
-    temp_sum = 0
+    confidence_sum = 0
     riktige_sum = 0
     gale_sum = 0
     for article in sorted_acc:
         # print (article)
         # print("{} , Accuracy: {:.3f}  Artikler: {}  Riktige: {} Feil: {}".format(key,(accuracy[key][1]/accuracy[key][0]),accuracy[key][0],accuracy[key][1],accuracy[key][2]))
-        if article[1][0] >= 1 and float(article[1][2] + article[1][1]) != 0:
-            temp_sum += float(article[1][1] / float(article[1][2] + article[1][1]))
+        guesses=float(article[1][2] + article[1][1])
+        if article[1][0] >= 1:
+            if guesses==0:
+                confidence=0
+            else:
+                confidence=float(article[1][1] / guesses)
+            confidence_sum += confidence
             riktige_sum += article[1][1]
+            accuracy_temp=(article[1][1] / article[1][0])
+            wrong_guess=article[1][0] - article[1][1]
             gale_sum += article[1][2]
             #print("Dewey nr: {} -  Accuracy: {:.3f}  Artikler: {}  Riktige: {} Feil: {} Feil gjetning her: {} Confidence:{:.4f} \n ".format(article[0].replace("__label__", ""),(article[1][1] / article[1][0]),article[1][0], article[1][1],article[1][0] - article[1][1],article[1][2], float(article[1][1] / float(article[1][2] + article[1][1]))))
             # print("{} , Accuracy: {:.3f}  Artikler: {}  Riktige: {} Feil: {}".format(key,(accuracy[key][1]/accuracy[key][0]),accuracy[key][0],accuracy[key][1],accuracy[key][0]-accuracy[key][1]))
-            return_text+=("Dewey nr: {} -  Accuracy: {:.3f}  Artikler: {}  Riktige: {} Feil: {} Feil gjetning her: {} Confidence:{:.4f} \n ".format(article[0].replace("__label__", ""),(article[1][1] / article[1][0]),article[1][0], article[1][1],article[1][0] - article[1][1],article[1][2], float(article[1][1] / float(article[1][2] + article[1][1]))))
+            return_text+=("Dewey nr: {} -  Accuracy: {:.3f}  Artikler: {}  Riktige: {} Feil: {} Feil gjetning her: {} Confidence:{:.4f} \n ".format(article[0].replace("__label__", ""),accuracy_temp,article[1][0], article[1][1],wrong_guess,article[1][2],confidence ))
     result = classifier.test(test_file, 1)
-    return_text+=("Average confidence: {} \n".format(temp_sum / float(len(sorted_acc))))
+    return_text+=("Average confidence: {} \n".format(confidence_sum / float(len(sorted_acc))))
     print("Average confidence: {} \n".format(temp_sum / float(len(sorted_acc))))
     return_text+=("Samlet confidence: {}\n".format(riktige_sum / float(gale_sum + riktige_sum)))
     return_text+=("Overall accuracy: {} \n".format(result.precision))

@@ -33,7 +33,7 @@ def create_classifier(training_file,name,epoch,lr1,DIMENSIONS, up_rate,ws,loss1,
 
 #parameters
 
-def train_fasttext_models(train_file,test_file,save_location, epoch_vector,learning_rate_vector,learning_rate_update_vector,word_window_vector,loss_vector,wiki_vector,fasttext_k, minimum_articles,save_model):
+def train_fasttext_models(train_file,test_file,save_location, epoch_vector,learning_rate_vector,learning_rate_update_vector,word_window_vector,loss_vector,wiki_vector,fasttext_k, minimum_articles,dewey_digits,save_model):
     temp_file=open(os.path.join(save_location,"training_file.txt"),"w")
     temp_file.write(train_file)
     temp_file = open(os.path.join(save_location, "test_file.txt"), "w")
@@ -98,14 +98,14 @@ def train_fasttext_models(train_file,test_file,save_location, epoch_vector,learn
                             print("Iteration nr {} out of {}".format(count, total_iterations))
                             print("Creating and training classifier:")
                             name="model-{}-{}-{}-{}-{}-{}".format(str(epoch),str(lr).replace(".",""),str(up_rate),str(ws),loss,str(wiki_vec))
-                            if save_model:
+                            if save_model=="True":
                                 classifier = create_classifier(os.path.join(save_location,"training_file.txt"),name, epoch, lr, DIMENSIONS, up_rate, ws, loss, wiki_vec,save_location)
                             else:
                                 classifier = create_classifier(os.path.join(save_location,"training_file.txt"),"temp", epoch, lr, DIMENSIONS, up_rate, ws, loss, wiki_vec,save_location)
                             print("Creating the classifier took {} seconds.".format(time.time() - tid))
                             tid = time.time()
                             if not os.path.exists(os.path.join(save_location,"logs")):
-                                os.makedirs(os.path.join((save_location,"logs"))
+                                os.makedirs(os.path.join(save_location,"logs"))
                             with open(os.path.join(os.path.join(save_location,"logs"),"log-"+name+".txt"),"w") as logfile:
 
                                 logfile.write("epoch:::{}\n".format(str(epoch)))
@@ -114,6 +114,8 @@ def train_fasttext_models(train_file,test_file,save_location, epoch_vector,learn
                                 logfile.write("Word context length:::{}\n".format(str(ws)))
                                 logfile.write("loss:::{}\n".format(loss))
                                 logfile.write("wiki_vec:::{}\n".format(str(wiki_vec)))
+                                logfile.write("minimum_articles:::{}\n".format(str(minimum_articles)))
+                                logfile.write("dewey_digits:::{}\n".format(str(dewey_digits)))
                                 for k in Ks:
                                     print("K-run:{}".format(k))
                                     result = classifier.test(os.path.join(save_location, "test_file.txt"), k)

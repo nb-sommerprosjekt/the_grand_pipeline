@@ -12,6 +12,7 @@ from nltk.tokenize import word_tokenize
 from numpy import array_split
 from fast_text import train_fasttext_models
 import sys
+from MLP import run_mlp_tests
 
 def load_config(config_file):
     print("Loading config file: {}".format(config_file))
@@ -32,6 +33,15 @@ def load_config(config_file):
                             config[temp[0]] = temp[1]
     print("Config-file loaded")
     return config
+
+def read_dewey_and_text(location):
+    with  open(location, "r+")as f:
+        text = f.read()
+    text = text.split(" ")
+    dewey = text[0].replace("__label__", "")
+    text = " ".join(text[1:])
+    return dewey,text
+
 
 def preprocess(corpus_name,stemming, stop_words,sentences,lower_case,extra_functions):
     counter=0
@@ -237,13 +247,7 @@ def split_articles(folder, article_length):
 
     for subdir, dirs, files in os.walk(folder):
         for file in files:
-            with  open(os.path.join(folder, file), "r+")as f:
-                text=f.read()
-            text= text.split(" ")
-            dewey = text[0].replace("__label__", "")
-            text=" ".join(text[1:])
-            #print(dewey)
-
+            dewey, text = read_dewey_and_text(os.path.join(folder, file))
             texts=split_text(text,article_length)
             for i,text in enumerate(texts):
 
@@ -274,13 +278,7 @@ def remove_unecessary_articles(training_folder_split,corpus_folder,minimum_artic
 
     for subdir, dirs, files in os.walk(training_folder_split):
         for file in files:
-            with open(os.path.join(training_folder_split, file), "r+") as f:
-                f.seek(0)
-                text = f.read()
-                f.close()
-
-            dewey = text.split(" ")[0].replace("__label__", "")
-            dewey = dewey.replace(".", "")
+            dewey, text = read_dewey_and_text(os.path.join(training_folder_split, file))
             if int(dewey_digits) > 0:
                 if len(dewey) > int(dewey_digits):
                     dewey = dewey[:dewey_digits]
@@ -297,22 +295,14 @@ def remove_unecessary_articles(training_folder_split,corpus_folder,minimum_artic
         else:
             for file in dewey_dict[key]:
                 valid_deweys.add(key)
-                with open(os.path.join(training_folder_split, file), "r+") as f2:
-                    f2.seek(0)
-                    text = f2.read()
-                    temp1=len(text)
-                    text = text.split(" ")
-                    dewey = text[0].replace("__label__", "")
-                    text = " ".join(text[1:])
-                    temp2=len(text)
-
-                    if len(dewey) > dewey_digits:
-                        dewey = dewey[:dewey_digits]
-                    with open(os.path.join(training_folder_split, file), "r+") as f3:
-                        f3.seek(0)
-                        f3.write("__label__" + dewey + " " + str(text))
-                        f3.truncate()
-                        f3.close()
+                dewey,text=read_dewey_and_text(os.path.join(training_folder_split, file))
+                if len(dewey) > dewey_digits:
+                    dewey = dewey[:dewey_digits]
+                with open(os.path.join(training_folder_split, file), "r+") as f3:
+                    f3.seek(0)
+                    f3.write("__label__" + dewey + " " + str(text))
+                    f3.truncate()
+                    f3.close()
 
     print("Removed unnecessary dewey numbers. There are {} unique dewey numbers in the training set.".format(len(valid_deweys)))
     return rubbish_folder,valid_deweys
@@ -372,21 +362,11 @@ def load_set(folder):
 def create_folder(path):
     os.makedirs(path, exist_ok=True)
 
+def save_file(location,name,text):
+    with open (os.path.join(location,name),"w+") as file:
+        file.write(text)
+    return  str(os.path.join(location,name))
 
-
-# def fix_corpus(folder, name_of_new_folder):
-#
-#     if not os.path.exists(name_of_new_folder):
-#         os.makedirs(name_of_new_folder)
-#
-#
-#     arr_txt = [path for path in os.listdir(folder) if path.endswith(".txt")]
-#     for article_path in arr_txt:
-#         with open(folder+"/"+article_path,"r") as text_file:
-#             text = text_file.read().replace('\n',' ')
-#         edited_text = open(name_of_new_folder+'/'+article_path,'w')
-#         edited_text.write(text)
-#         edited_text.close()
 
 if __name__ == '__main__':
 
@@ -414,19 +394,10 @@ if __name__ == '__main__':
 
     test_text=load_set(test_folder_split)
     training_text=load_set(training_folder_split)
+    test_file=save_file("tmp","test_file.txt",test_text)
+    training_file=save_file("tmp","training_file.txt",training_text)
 
     create_folder(os.path.join("fasttext",config["fasttext_run_name"]))
-    train_fasttext_models(training_text,test_text,os.path.join("fasttext",config["fasttext_run_name"]),config["epochs"],config["lr"],config["lr_update"],config["word_window"],config["loss"],config["wiki_vec"],config["fasttext_k"],config["minimum_articles"],config["save_model"])
-
-
-    #preprocess function
-    #result is FT-format-file
-
-    #split to training and test
-    # add wiki to training
-    # add fakes to training (and test?)
-    #split up test and training to multiple articles
-
-
-    #sum to one file
+    #train_fasttext_models(training_text,test_text,os.path.join("fasttext",config["fasttext_run_name"]),config["epochs"],config["lr"],config["lr_update"],config["word_window"],config["loss"],config["wiki_vec"],config["fasttext_k"],config["minimum_articles"],config["dewey_digits"],config["save_model"])
+    run_mlp_tests(training_file,test_file,"mlp",500,[10000],[1000],[10],"mean_squared_error","count",0.2)
 

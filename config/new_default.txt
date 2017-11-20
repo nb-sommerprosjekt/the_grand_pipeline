@@ -35,7 +35,7 @@ fasttext_run_name:::test_onsdag
 
 #mlp:
 mlp_epoch_vector::: [10]
-mlp_save_model_folder=mlp/
+mlp_save_model_folder:::mlp/
 model_stats_file_name:::model_stats
 mlp_batch_size:::64
 mlp_vocab_size_vector:::[5000]

@@ -14,7 +14,7 @@ import re
 
 def get_articles(original_name):
     # Tar inn en textfil som er labelet på fasttext-format. Gir ut to arrays. Et med deweys og et med tekstene. [deweys],[texts]
-    articles=open(original_name+'.txt',"r")
+    articles=open(original_name,"r")
     articles=articles.readlines()
     dewey_array = []
     docs = []
@@ -37,7 +37,7 @@ def get_articles_from_folder(folder):
     dewey_array = []
     docs = []
     for article_path in arr_txt:
-            article = open(folder+'/'+article_path, "r")
+            article = open(os.path.join(folder,article_path), "r")
             article = article.readlines()
             for article_content in article:
                 dewey=article_content.partition(' ')[0].replace("__label__","")
@@ -51,7 +51,7 @@ def get_articles_from_folder(folder):
 
 
 
-def train_mlp(TRAINING_SET, BATCH_SIZE, VOCAB_SIZE, MAX_SEQUENCE_LENGTH,EPOCHS, FOLDER_TO_SAVE_MODEL, LOSS_MODEL, MODEL_STATS_FILE_NAME,VECTORIZATION_TYPE, VALIDATION_SPLIT):
+def train_mlp(TRAINING_SET, BATCH_SIZE, VOCAB_SIZE, MAX_SEQUENCE_LENGTH,EPOCHS, FOLDER_TO_SAVE_MODEL, LOSS_MODEL, VECTORIZATION_TYPE, VALIDATION_SPLIT):
     '''Training model'''
 
     start_time = time.time()
@@ -90,19 +90,19 @@ def train_mlp(TRAINING_SET, BATCH_SIZE, VOCAB_SIZE, MAX_SEQUENCE_LENGTH,EPOCHS, 
 
     #Lagre modell
     model_time_stamp = '{:%Y%m%d%H%M}'.format(datetime.datetime.now())
-    model_directory = FOLDER_TO_SAVE_MODEL + "mlp-" + str(vocab_size) + "-" + str(MAX_SEQUENCE_LENGTH) + "-" + str(
-        EPOCHS) + "-" + str(model_time_stamp)
+    model_directory = os.path.join(FOLDER_TO_SAVE_MODEL ,"mlp-" + str(vocab_size) + "-" + str(MAX_SEQUENCE_LENGTH) + "-" + str(
+        EPOCHS) + "-" + str(model_time_stamp))
     if not os.path.exists(model_directory):
         os.makedirs(model_directory)
 
 
-    save_model_path = model_directory+"/model.bin"
+    save_model_path = os.path.join(model_directory,"model.bin")
     model.save(save_model_path)
 
 
     time_elapsed = time.time() - start_time
     # Skrive nøkkelparametere til tekstfil
-    log_model_stats(MODEL_STATS_FILE_NAME, model_directory,TRAINING_SET,x_train
+    log_model_stats(model_directory,TRAINING_SET,x_train
                 ,num_classes, vocab_size, MAX_SEQUENCE_LENGTH
                 , EPOCHS, time_elapsed, save_model_path,
                     LOSS_MODEL, VECTORIZATION_TYPE,VALIDATION_SPLIT, word2vec= None)
@@ -118,21 +118,22 @@ def train_mlp(TRAINING_SET, BATCH_SIZE, VOCAB_SIZE, MAX_SEQUENCE_LENGTH,EPOCHS, 
 
     print("Modell ferdig trent og lagret i "+ model_directory)
     return model_directory
+
 def test_mlp(TEST_SET, MODEL_DIRECTORY):
     '''Test module for MLP'''
 
     #Loading model
-    model = load_model(MODEL_DIRECTORY+'/model.bin')
+    model = load_model(os.path.join(MODEL_DIRECTORY,'model.bin'))
 
     # loading tokenizer
-    with open(MODEL_DIRECTORY+'/tokenizer.pickle', 'rb') as handle:
+    with open(os.path.join(MODEL_DIRECTORY,"tokenizer.pickle"), 'rb') as handle:
         tokenizer = pickle.load(handle)
     # loading label indexes
-    with open(MODEL_DIRECTORY + '/label_indexes.pickle', 'rb') as handle:
+    with open(os.path.join(MODEL_DIRECTORY ,"label_indexes.pickle"), 'rb') as handle:
         labels_index = pickle.load(handle)
 
     # Loading parameters like max_sequence_length, vocabulary_size and vectorization_type
-    with open(MODEL_DIRECTORY+'/model_stats', 'r') as params_file:
+    with open(os.path.join(MODEL_DIRECTORY,"model_stats"), 'r') as params_file:
         params_data = params_file.read()
 
     re_max_seq_length = re.search('length:(.+?)\n', params_data)
@@ -156,11 +157,11 @@ def test_mlp(TEST_SET, MODEL_DIRECTORY):
     print('Test Accuracy', test_accuracy)
 
     # Writing results to txt-file.
-    with open(MODEL_DIRECTORY+"/result.txt",'a') as result_file:
+    with open(os.path.join(MODEL_DIRECTORY,"result.txt"),'a') as result_file:
         result_file.write('test_set:'+TEST_SET+'\n'+
                           'Test_score:'+ str(test_score)+ '\n'
                           'Test_accuracy:' + str(test_accuracy)+'\n\n')
-
+    print("Sucesfully returned")
     return test_score,test_accuracy
 
 def fasttextTrain2mlp(FASTTEXT_TRAIN_FILE,MAX_SEQUENCE_LENGTH, VOCAB_SIZE, VECTORIZATION_TYPE):
@@ -221,7 +222,7 @@ def evaluation(MODEL, X_TEST,Y_TEST, VERBOSE):
         test_accuracy = score[1]
         return  test_score, test_accuracy
 
-def log_model_stats(model_stats_file_name, model_directory, training_set_name, training_set,
+def log_model_stats(model_directory, training_set_name, training_set,
                  num_classes,vocab_size, max_sequence_length,
                 epochs, time_elapsed,
                 path_to_model, loss_model, vectorization_type, validation_split, word2vec ):
@@ -232,7 +233,7 @@ def log_model_stats(model_stats_file_name, model_directory, training_set_name, t
     if not os.path.exists(model_directory):
         os.makedirs(model_directory)
 
-    model_stats_file = open(model_directory+"/"+model_stats_file_name, "a")
+    model_stats_file = open(os.path.join(model_directory,"model_stats"), "a")
     model_stats_file.write("Time:" + str(time_stamp) + '\n'
                       + "Time elapsed: " + str(time_elapsed) + '\n'
                       + "Training set:" + training_set_name + "\n"
@@ -245,7 +246,7 @@ def log_model_stats(model_stats_file_name, model_directory, training_set_name, t
                       + "loss_model:" + str(loss_model) + '\n'
                       + "vectorization_type:" + str(vectorization_type)+'\n'
                       + "Validation_split:" + str(validation_split) + '\n'
-                      + "word2vec:" + str(word2vec)+'\n'
+                      + "word2vec:" + str(word2vec)+'\n\n\n'
                       )
     model_stats_file.close()
 
@@ -253,7 +254,7 @@ def log_model_stats(model_stats_file_name, model_directory, training_set_name, t
 
 
 
-def run_mlp_tests (training_set, test_set, save_model_folder,model_stats_file_name,
+def run_mlp_tests (training_set, test_set, save_model_folder,
                    batch_size,vocab_size_vector, sequence_length_vector, epoch_vector, loss_model, vectorization_type, validation_split):
     '''Function for running test and training with different combinations of vocab_size, sequence_lenghts and epochs'''
     for vocab_test in vocab_size_vector:
@@ -269,7 +270,6 @@ def run_mlp_tests (training_set, test_set, save_model_folder,model_stats_file_na
                         EPOCHS=epoch_test,
                         FOLDER_TO_SAVE_MODEL=save_model_folder,
                         LOSS_MODEL= loss_model,
-                        MODEL_STATS_FILE_NAME = model_stats_file_name,
                         VECTORIZATION_TYPE= vectorization_type,
                         VALIDATION_SPLIT = validation_split
                         )
@@ -282,10 +282,10 @@ def run_mlp_tests (training_set, test_set, save_model_folder,model_stats_file_na
                       print("Noe gikk feil med testen, prøver på nytt")
                       test_mlp(test_set, MOD_DIR)
 
-if __name__ == '__main__':
-
-    run_mlp_tests(training_set="corpus_w_wiki/data_set_100/combined100_training", test_set="corpus_w_wiki/data_set_100/100_test",save_model_folder= "mlp/",
-                     model_stats_file_name= "model_stats",batch_size=64, vocab_size_vector=[5000], sequence_length_vector = [5000]
-                    ,epoch_vector = [10], loss_model = "categorical_crossentropy", vectorization_type = 'binary',validation_split= None)
-
-    test_mlp(TEST_SET="corpus_w_wiki/data_set_100/100_test",MODEL_DIRECTORY="mlp/mlp-5000-5000-10-201711091157")
+# if __name__ == '__main__':
+#
+#     run_mlp_tests(training_set="corpus_w_wiki/data_set_100/combined100_training", test_set="corpus_w_wiki/data_set_100/100_test",save_model_folder= "mlp/",
+#                      model_stats_file_name= "model_stats",batch_size=64, vocab_size_vector=[5000], sequence_length_vector = [5000]
+#                     ,epoch_vector = [10], loss_model = "categorical_crossentropy", vectorization_type = 'binary',validation_split= None)
+#
+#     test_mlp(TEST_SET="corpus_w_wiki/data_set_100/100_test",MODEL_DIRECTORY="mlp/mlp-5000-5000-10-201711091157")

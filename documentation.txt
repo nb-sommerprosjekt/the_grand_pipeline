@@ -36,6 +36,13 @@ fasttext_run_name:::new_default  (string)
 #cnn:
 
 
+MLP:
+
+mode: one of "binary", "count", "tfidf", "freq" (default: "binary").
+
+loss funksjons:  https://keras.io/losses/
+
+
 
 
 
