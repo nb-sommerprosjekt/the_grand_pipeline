@@ -2,6 +2,8 @@
 
 #preprocessing:	
 name_corpus:::test_onsdag
+data_set:::tcg
+data_set_folder:::data_set
 stemming:::True
 sentences:::False
 stop_words:::True
@@ -23,20 +25,19 @@ dewey_digits:::3
 #model_parameters:
 
 #fast_text:
-epochs:::75
-lr:::0.3
-lr_update:::98
-loss:::hs,softmax
-wiki_vec:::True
-word_window:::5
-fasttext_k:::1,5,10
-save_model:::False
-fasttext_run_name:::test_onsdag
+ft_epochs:::75
+ft_lr:::0.3
+ft_lr_update:::98
+ft_loss:::hs,softmax
+ft_wiki_vec:::True
+ft_word_window:::5
+ft_k_labels:::1,5,10
+ft_save_model:::False
+ft_run_name:::test_onsdag
 
 #mlp:
 mlp_epoch_vector:::10,20
 mlp_save_model_folder:::mlp
-model_stats_file_name:::model_stats
 mlp_batch_size:::64
 mlp_vocab_size_vector:::5000,1000
 mlp_sequence_length_vector:::5000,10000
@@ -44,3 +45,15 @@ mlp_loss_model:::categorical_crossentropy
 mlp_vectorization_type:::binary
 mlp_validation_split:::0.1
 mlp_k_labels:::3
+
+
+#CNN:
+cnn_epoch_vector:::1
+cnn_save_model_folder:::cnn
+cnn_batch_size:::64
+cnn_vocab_size_vector:::1000
+cnn_sequence_length_vector:::1000
+cnn_loss_model:::categorical_crossentropy
+cnn_validation_split:::0.0
+cnn_w2v:::w2v_tgc/full.bin
+cnn_k_labels:::3

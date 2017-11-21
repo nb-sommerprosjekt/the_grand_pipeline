@@ -30,7 +30,7 @@ def fasttextTrain2CNN(training_set, max_sequence_length, vocab_size):
     tokenizer.fit_on_texts(text_train)
     sequences = tokenizer.texts_to_sequences(text_train)
 
-    print(sequences)
+    #print(sequences)
     word_index = tokenizer.word_index
     print('Found %s unique tokens.' % len(word_index))
 
@@ -100,8 +100,8 @@ def train_cnn(training_set, VOCAB_SIZE, MAX_SEQUENCE_LENGTH,EPOCHS, FOLDER_TO_SA
 
     if not os.path.exists(FOLDER_TO_SAVE_MODEL):
         os.makedirs(FOLDER_TO_SAVE_MODEL)
-    model_directory = FOLDER_TO_SAVE_MODEL + "cnn-" + str(VOCAB_SIZE) + "-" + str(MAX_SEQUENCE_LENGTH) + "-" + str(
-        EPOCHS) + "-" + str(time_stamp)
+    model_directory = os.path.join(FOLDER_TO_SAVE_MODEL , "cnn-" + str(VOCAB_SIZE) + "-" + str(MAX_SEQUENCE_LENGTH) + "-" + str(
+        EPOCHS) + "-" + str(time_stamp))
     if not os.path.exists(model_directory):
         os.makedirs(model_directory)
     #folder_to_save_model= MODEL_DIRECTORY+str(VOCAB_SIZE)+"-"+str(MAX_SEQUENCE_LENGTH)+"-"+str(EPOCHS)+"-"+str(time_stamp)
@@ -118,7 +118,7 @@ def train_cnn(training_set, VOCAB_SIZE, MAX_SEQUENCE_LENGTH,EPOCHS, FOLDER_TO_SA
 
     #Saving model
     model.save(save_model_path)
-    print("modell er nå lagret i folder: "+ model_directory)
+    print("modell er nå lagret i folder: {}".format(model_directory))
 
     #Saving tokenizer
     with open(model_directory+'/tokenizer.pickle', 'wb') as handle:
@@ -153,17 +153,17 @@ def cnn_pred(test_set, mod_dir, k_top_labels):
     test_sequences = tokenizer.texts_to_sequences(text_test)
 
     test_word_index = tokenizer.word_index
-    print('Found %s unique tokens.' % len(test_word_index))
+    print('Found {} unique tokens.'.format(len(test_word_index)))
 
 
     re_max_seq_length = re.search('length:(.+?)\n', params_data)
     if re_max_seq_length:
             MAX_SEQUENCE_LENGTH = int(re_max_seq_length.group(1))
-            print(MAX_SEQUENCE_LENGTH)
+            print("Max sequence length: {}".format(MAX_SEQUENCE_LENGTH))
     re_vocab_size = re.search('size:(.+?)\n', params_data)
     if re_vocab_size:
         vocab_size = int(re_vocab_size.group(1))
-        print(vocab_size)
+        print("The vocabulary size: {}".format(vocab_size))
 
 
 
@@ -175,6 +175,7 @@ def cnn_pred(test_set, mod_dir, k_top_labels):
     test_score, test_accuracy = model.evaluate(x_test, y_test, batch_size= 64, verbose=1)
     print('Test_score:', str(test_score))
     print('Test Accuracy', str(test_accuracy))
+    k_top_labels=3
     predictions = MLP.prediction(model, x_test, k_top_labels,labels_index )
     # Writing results to txt-file.
     with open(mod_dir+"/result.txt",'a') as result_file:
@@ -184,6 +185,28 @@ def cnn_pred(test_set, mod_dir, k_top_labels):
     return predictions
 def run_cnn_tests(TRAINING_SET, TEST_SET, VOCAB_VECTOR, SEQUENCE_LENGTH_VECTOR, EPOCHS, FOLDER_TO_SAVE_MODEL, LOSS_MODEL,  validation_split, word2vec_model, k_top_labels):
     '''Module for running test sequences with different parameters.'''
+
+    validation_split=float(validation_split)
+
+
+    if isinstance(VOCAB_VECTOR,str):
+        VOCAB_VECTOR=[int(VOCAB_VECTOR)]
+    else:
+        VOCAB_VECTOR= list(map(int, VOCAB_VECTOR))
+
+    if isinstance(SEQUENCE_LENGTH_VECTOR,str):
+        SEQUENCE_LENGTH_VECTOR=[int(SEQUENCE_LENGTH_VECTOR)]
+    else:
+        SEQUENCE_LENGTH_VECTOR= list(map(int, SEQUENCE_LENGTH_VECTOR))
+
+    if isinstance(EPOCHS,str):
+        EPOCHS=[int(EPOCHS)]
+    else:
+        EPOCHS= list(map(int, EPOCHS))
+
+        k_top_labels=int(k_top_labels)
+
+
     for vocab_test in VOCAB_VECTOR:
         for sequence_length_test in SEQUENCE_LENGTH_VECTOR:
             for epoch_test in EPOCHS:
@@ -203,12 +226,12 @@ def run_cnn_tests(TRAINING_SET, TEST_SET, VOCAB_VECTOR, SEQUENCE_LENGTH_VECTOR, 
                         print("Noe gikk galt, prøver gjenkjenning på nytt.")
                         cnn_pred(TEST_SET, test_mod_dir, k_top_labels)
 
-if __name__ == '__main__':
-    vocab_vector = [5000]
-    sequence_length_vector = [5000]
-    epoch_vector = [1]
-    run_cnn_tests(TRAINING_SET= "corpus_w_wiki/data_set_100/combined100_training", TEST_SET= "corpus_w_wiki/data_set_100/100_test", VOCAB_VECTOR=vocab_vector
-                   , SEQUENCE_LENGTH_VECTOR= sequence_length_vector,EPOCHS= epoch_vector, FOLDER_TO_SAVE_MODEL = "cnn/",
-                   LOSS_MODEL= "categorical_crossentropy", validation_split= 'None', word2vec_model ="w2v_tgc/full.bin", k_top_labels = 5)
+# if __name__ == '__main__':
+#     vocab_vector = [5000]
+#     sequence_length_vector = [5000]
+#     epoch_vector = [1]
+#     run_cnn_tests(TRAINING_SET= "corpus_w_wiki/data_set_100/combined100_training", TEST_SET= "corpus_w_wiki/data_set_100/100_test", VOCAB_VECTOR=vocab_vector
+#                    , SEQUENCE_LENGTH_VECTOR= sequence_length_vector,EPOCHS= epoch_vector, FOLDER_TO_SAVE_MODEL = "cnn/",
+#                    LOSS_MODEL= "categorical_crossentropy", validation_split= 'None', word2vec_model ="w2v_tgc/full.bin", k_top_labels = 5)
 
     #cnn_pred("corpus_w_wiki/data_set_100/100_test", 'cnn/cnn-5000-5000-10-20171110130602', 5)

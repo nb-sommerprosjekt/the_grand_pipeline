@@ -13,6 +13,7 @@ from numpy import array_split
 from fast_text import train_fasttext_models
 import sys
 from MLP import run_mlp_tests
+from cnn    import run_cnn_tests
 
 def load_config(config_file):
     print("Loading config file: {}".format(config_file))
@@ -31,7 +32,7 @@ def load_config(config_file):
                             config[temp[0]]=temp[1].split(",")
                         else:
                             config[temp[0]] = temp[1]
-    print("Config-file loaded")
+    print("Config-file loading complete.")
     return config
 
 def read_dewey_and_text(location):
@@ -43,10 +44,10 @@ def read_dewey_and_text(location):
     return dewey,text
 
 
-def preprocess(corpus_name,stemming, stop_words,sentences,lower_case,extra_functions):
+def preprocess(corpus_name,data_set,data_set_folder,stemming, stop_words,sentences,lower_case,extra_functions):
     counter=0
-    rootdir="tgc"
-    corpus_name_folder=os.path.join("data_set",corpus_name+"_folder")
+    rootdir=data_set
+    corpus_name_folder=os.path.join(data_set_folder,corpus_name+"_folder")
     corpus_name_location=os.path.join(corpus_name_folder,corpus_name)
 
     if not os.path.exists(corpus_name_folder):
@@ -288,6 +289,7 @@ def remove_unecessary_articles(training_folder_split,corpus_folder,minimum_artic
             else:
                 dewey_dict[dewey] = [file]
     valid_deweys=set()
+    training_set_length=0
     for key in dewey_dict.keys():
         if len(dewey_dict[key])<int(minimum_articles):
             for file in dewey_dict[key]:
@@ -295,6 +297,7 @@ def remove_unecessary_articles(training_folder_split,corpus_folder,minimum_artic
         else:
             for file in dewey_dict[key]:
                 valid_deweys.add(key)
+                training_set_length+=1
                 dewey,text=read_dewey_and_text(os.path.join(training_folder_split, file))
                 if len(dewey) > dewey_digits:
                     dewey = dewey[:dewey_digits]
@@ -305,7 +308,7 @@ def remove_unecessary_articles(training_folder_split,corpus_folder,minimum_artic
                     f3.close()
 
     print("Removed unnecessary dewey numbers. There are {} unique dewey numbers in the training set.".format(len(valid_deweys)))
-    return rubbish_folder,valid_deweys
+    return rubbish_folder,valid_deweys,training_set_length
 
 
 def prep_test_set(test_folder,valid_deweys,article_length,dewey_digits):
@@ -315,6 +318,7 @@ def prep_test_set(test_folder,valid_deweys,article_length,dewey_digits):
 
     print("Test-folder split.")
 
+    test_set_length=0
     for subdir, dirs, files in os.walk(test_folder_split):
         for file in files:
             #print(len(files))
@@ -329,14 +333,14 @@ def prep_test_set(test_folder,valid_deweys,article_length,dewey_digits):
                     #print(dewey)
                 #print(dewey)
                 if dewey in valid_deweys:
-
+                    test_set_length+=1
                     #print("Not thrash")
                     f.seek(0)
                     f.write("__label__" + dewey + " " + str(text))
                     f.truncate()
                 else:
                     os.rename(os.path.join(test_folder_split, file), os.path.join(rubbish_folder, file))
-    return test_folder_split
+    return test_folder_split,test_set_length
 
 
 
@@ -375,7 +379,8 @@ if __name__ == '__main__':
     print("Trying to load config-file named: {}".format(sys.argv[1]))
     config=load_config(sys.argv[1])
 
-    corpus_folder=preprocess(config["name_corpus"], config["stemming"], config["stop_words"],config["sentences"], config["lower_case"], config["extra_functions"])
+    corpus_folder=preprocess(config["name_corpus"],config["data_set"],config["data_set_folder"], config["stemming"], config["stop_words"],config["sentences"], config["lower_case"], config["extra_functions"])
+
     wiki_corpus_folder=preprocess_wiki(corpus_folder,config["name_corpus"]+"_wiki", config["stemming"], config["stop_words"], config["sentences"],config["lower_case"], config["extra_functions"])
     training_folder, test_folder=split_to_training_and_test(corpus_folder, config["name_corpus"],0.2,3)
     if config["wikipedia"]:
@@ -388,16 +393,31 @@ if __name__ == '__main__':
 
     training_folder_split=split_articles(training_folder,1000)
 
-    rubbish_folder,valid_deweys=remove_unecessary_articles(training_folder_split,corpus_folder,config["minimum_articles"],config["dewey_digits"])
+    rubbish_folder,valid_deweys,training_set_length=remove_unecessary_articles(training_folder_split,corpus_folder,config["minimum_articles"],config["dewey_digits"])
     #print(valid_deweys)
-    test_folder_split=prep_test_set(test_folder,valid_deweys,config["article_size"],config["dewey_digits"])
+    test_folder_split,test_set_length=prep_test_set(test_folder,valid_deweys,config["article_size"],config["dewey_digits"])
 
     test_text=load_set(test_folder_split)
     training_text=load_set(training_folder_split)
     test_file=save_file("tmp","test_file.txt",test_text)
     training_file=save_file("tmp","training_file.txt",training_text)
+    create_folder(os.path.join("fasttext",config["ft_run_name"]))
 
-    create_folder(os.path.join("fasttext",config["fasttext_run_name"]))
-    #train_fasttext_models(training_text,test_text,os.path.join("fasttext",config["fasttext_run_name"]),config["epochs"],config["lr"],config["lr_update"],config["word_window"],config["loss"],config["wiki_vec"],config["fasttext_k"],config["minimum_articles"],config["dewey_digits"],config["save_model"])
-    run_mlp_tests(training_file,test_file,config["mlp_save_model_folder"],config["mlp_batch_size"],config["mlp_vocab_size_vector"],config["mlp_sequence_length_vector"],config["mlp_epoch_vector"],config["mlp_loss_model"],config["mlp_vectorization_type"],config["mlp_validation_split"],config["mlp_k_labels"])
+    if not (os.path.exists(os.path.join(corpus_folder, "run_log.txt"))):
+        parameters= open(os.path.join("config",sys.argv[1]+".txt"),"r")
+        parameters=parameters.read()
+        logfile=open(os.path.join(corpus_folder, "run_log.txt"), "w")
+        logfile.write("Copy of the parameters used when this set was created: \n\n")
+        logfile.write(parameters+"\n")
+        logfile.write("The number of articles in the training set: {}\n".format(training_set_length))
+        logfile.write("The number of articles in the test set: {}\n".format(test_set_length))
+        dewey_list=list(valid_deweys)
+        dewey_list.sort()
+        logfile.write("Here is the deweys in the training: \n")
+        logfile.write(str(dewey_list))
 
+
+
+    #train_fasttext_models(training_text,test_text,os.path.join("fasttext",config["ft_run_name"]),config["ft_epochs"],config["ft_lr"],config["ft_lr_update"],config["ft_word_window"],config["ft_loss"],config["ft_wiki_vec"],config["ft_k_labels"],config["minimum_articles"],config["dewey_digits"],config["ft_save_model"])
+    #run_mlp_tests(training_file,test_file,config["mlp_save_model_folder"],config["mlp_batch_size"],config["mlp_vocab_size_vector"],config["mlp_sequence_length_vector"],config["mlp_epoch_vector"],config["mlp_loss_model"],config["mlp_vectorization_type"],config["mlp_validation_split"],config["mlp_k_labels"])
+    #run_cnn_tests(training_file,test_file,config["cnn_vocab_size_vector"],config["cnn_sequence_length_vector"],config["cnn_epoch_vector"],config["cnn_save_model_folder"],config["cnn_loss_model"],config["cnn_validation_split"],config["cnn_w2v"],config["cnn_k_labels"])
