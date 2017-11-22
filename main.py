@@ -14,6 +14,10 @@ from fast_text import train_fasttext_models
 import sys
 from MLP import run_mlp_tests
 from cnn    import run_cnn_tests
+from data_augmentation import create_fake_corpus
+import nltk
+
+
 
 def load_config(config_file):
     print("Loading config file: {}".format(config_file))
@@ -373,6 +377,7 @@ def save_file(location,name,text):
 
 
 if __name__ == '__main__':
+    nltk.download('omw')
 
     # fix_corpus("corpus","corpus2")
     # exit(0)
@@ -391,14 +396,22 @@ if __name__ == '__main__':
         add_wiki_to_training(wiki_corpus_folder,training_folder)
     #load_config_file
 
-    training_folder_split=split_articles(training_folder,1000)
+    training_folder=split_articles(training_folder,1000)
+    artificial_training_folder=training_folder+"artificial"
+    if config["da_run"] == "True":
+        if os.path.exists(artificial_training_folder):
+            print("Artificial set already works. No action will be taken.")
+        else:
+            create_folder(artificial_training_folder)
+            create_fake_corpus(training_folder, artificial_training_folder, config["da_splits"], config["da_noise_percentage"],config["da_noise_method"])
+            training_folder=artificial_training_folder
 
-    rubbish_folder,valid_deweys,training_set_length=remove_unecessary_articles(training_folder_split,corpus_folder,config["minimum_articles"],config["dewey_digits"])
+    rubbish_folder,valid_deweys,training_set_length=remove_unecessary_articles(artificial_training_folder,corpus_folder,config["minimum_articles"],config["dewey_digits"])
     #print(valid_deweys)
     test_folder_split,test_set_length=prep_test_set(test_folder,valid_deweys,config["article_size"],config["dewey_digits"])
 
     test_text=load_set(test_folder_split)
-    training_text=load_set(training_folder_split)
+    training_text=load_set(training_folder)
     test_file=save_file("tmp","test_file.txt",test_text)
     training_file=save_file("tmp","training_file.txt",training_text)
     create_folder(os.path.join("fasttext",config["ft_run_name"]))
@@ -417,7 +430,9 @@ if __name__ == '__main__':
         logfile.write(str(dewey_list))
 
 
-
-    #train_fasttext_models(training_text,test_text,os.path.join("fasttext",config["ft_run_name"]),config["ft_epochs"],config["ft_lr"],config["ft_lr_update"],config["ft_word_window"],config["ft_loss"],config["ft_wiki_vec"],config["ft_k_labels"],config["minimum_articles"],config["dewey_digits"],config["ft_save_model"])
-    #run_mlp_tests(training_file,test_file,config["mlp_save_model_folder"],config["mlp_batch_size"],config["mlp_vocab_size_vector"],config["mlp_sequence_length_vector"],config["mlp_epoch_vector"],config["mlp_loss_model"],config["mlp_vectorization_type"],config["mlp_validation_split"],config["mlp_k_labels"])
-    #run_cnn_tests(training_file,test_file,config["cnn_vocab_size_vector"],config["cnn_sequence_length_vector"],config["cnn_epoch_vector"],config["cnn_save_model_folder"],config["cnn_loss_model"],config["cnn_validation_split"],config["cnn_w2v"],config["cnn_k_labels"])
+    if config["ft_run"]=="True":
+        train_fasttext_models(training_text,test_text,os.path.join("fasttext",config["ft_run_name"]),config["ft_epochs"],config["ft_lr"],config["ft_lr_update"],config["ft_word_window"],config["ft_loss"],config["ft_wiki_vec"],config["ft_k_labels"],config["minimum_articles"],config["dewey_digits"],config["ft_save_model"])
+    if config["mlp_run"]=="True":
+        run_mlp_tests(training_file,test_file,config["mlp_save_model_folder"],config["mlp_batch_size"],config["mlp_vocab_size_vector"],config["mlp_sequence_length_vector"],config["mlp_epoch_vector"],config["mlp_loss_model"],config["mlp_vectorization_type"],config["mlp_validation_split"],config["mlp_k_labels"])
+    if config["cnn_run"] == "True":
+        run_cnn_tests(training_file,test_file,config["cnn_vocab_size_vector"],config["cnn_sequence_length_vector"],config["cnn_epoch_vector"],config["cnn_save_model_folder"],config["cnn_loss_model"],config["cnn_validation_split"],config["cnn_w2v"],config["cnn_k_labels"])

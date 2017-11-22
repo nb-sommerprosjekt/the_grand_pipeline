@@ -70,7 +70,7 @@ def evaluate_fasttext(test_file,classifier):
             return_text+=("Dewey nr: {} -  Accuracy: {:.3f}  Artikler: {}  Riktige: {} Feil: {} Feil gjetning her: {} Confidence:{:.4f} \n ".format(article[0].replace("__label__", ""),accuracy_temp,article[1][0], article[1][1],wrong_guess,article[1][2],confidence ))
     result = classifier.test(test_file, 1)
     return_text+=("Average confidence: {} \n".format(confidence_sum / float(len(sorted_acc))))
-    print("Average confidence: {} \n".format(temp_sum / float(len(sorted_acc))))
+    print("Average confidence: {} \n".format(confidence_sum / float(len(sorted_acc))))
     return_text+=("Samlet confidence: {}\n".format(riktige_sum / float(gale_sum + riktige_sum)))
     return_text+=("Overall accuracy: {} \n".format(result.precision))
     return_text+=("Overall recall: {} \n".format(result.recall))

@@ -11,6 +11,7 @@ extra_functions:::False
 lower_case:::True
 
 
+
 #split_training_test
 test_ratio:::0.20
 
@@ -22,25 +23,35 @@ wikipedia:::False
 minimum_articles:::200
 dewey_digits:::3
 
+#data_augmentation
+da_run:::True
+da_splits:::2
+da_noise_percentage:::1
+da_noise_method:::noise_on_parts
+
+
 #model_parameters:
 
+
 #fast_text:
+ft_run:::True
 ft_epochs:::75
 ft_lr:::0.3
 ft_lr_update:::98
-ft_loss:::hs,softmax
+ft_loss:::hs
 ft_wiki_vec:::True
 ft_word_window:::5
 ft_k_labels:::1,5,10
 ft_save_model:::False
-ft_run_name:::test_onsdag
+ft_run_name:::test_onsdag2
 
 #mlp:
-mlp_epoch_vector:::10,20
+mlp_run:::True
+mlp_epoch_vector:::1
 mlp_save_model_folder:::mlp
 mlp_batch_size:::64
-mlp_vocab_size_vector:::5000,1000
-mlp_sequence_length_vector:::5000,10000
+mlp_vocab_size_vector:::5000
+mlp_sequence_length_vector:::5000
 mlp_loss_model:::categorical_crossentropy
 mlp_vectorization_type:::binary
 mlp_validation_split:::0.1
@@ -48,6 +59,7 @@ mlp_k_labels:::3
 
 
 #CNN:
+cnn_run:::True
 cnn_epoch_vector:::1
 cnn_save_model_folder:::cnn
 cnn_batch_size:::64
