@@ -1,0 +1,7 @@
+fasttext==0.8.3
+numpy==1.11.0
+gensim==2.3.0
+Keras==2.0.5
+dill==0.2.7.1
+nltk==3.2.4
+scikit_learn==0.19.1
