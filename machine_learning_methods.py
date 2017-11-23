@@ -10,10 +10,9 @@ from sklearn.naive_bayes import MultinomialNB, BernoulliNB
 from sklearn.linear_model import LogisticRegression
 from collections import defaultdict
 from sklearn.metrics import accuracy_score
-from sklearn.externals import joblib
 import os
 import dill
-import pickle
+import datetime
 
 class MeanEmbeddingVectorizer(object):
     def __init__(self, word2vec):
@@ -114,12 +113,30 @@ def logReg(x_train, y_train, vectorization_type):
 
     if vectorization_type =="tfidf":
        model = logReg_tfidf(x_train, y_train)
-    elif vectorization_type =="countVectorization":
+    elif vectorization_type =="count":
        model = logReg_Count(x_train, y_train)
     else:
         print("Vectorization type is not existing. Alternatives: tfidf or count")
         model = None
     return model
+def logReg_train_and_test(x_train,y_train, x_test, y_test, vectorization_type, model_dir):
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)
+    model =logReg(x_train, y_train, vectorization_type)
+    model_name = "model.pickle"
+    timestamp = '{:%Y%m%d%H%M%S}'.format(datetime.datetime.now())
+    save_path = model_dir + "/logReg-"+vectorization_type+timestamp
+
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+    saveSklearnModels(model,"model.pickle",save_path)
+    model_path = save_path + "/model.pickle"
+
+    #testing model
+    model_loaded = loadSklearnModel(model_path)
+    predictions, accuracy = getPredictionsAndAccuracy(x_test=x_test, y_test=y_test, model=model_loaded,returnAccuracy=True)
+
+    return predictions, accuracy
 
 def logReg_tfidf(x_train, y_train):
     logres_tfidf_model = Pipeline([("tfidf_vectorizer", TfidfVectorizer(analyzer=lambda x: x)), ("logres_tfidf", LogisticRegression())])
@@ -149,6 +166,25 @@ def svm(x_train, y_train, vectorization_type, w2v_path = None):
         model = None
 
     return model
+def svm_train_and_test(x_train,y_train, x_test, y_test, vectorization_type, model_dir,  w2v_path = None):
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)
+
+    model =svm(x_train, y_train, vectorization_type, w2v_path= w2v_path)
+
+    timestamp = '{:%Y%m%d%H%M%S}'.format(datetime.datetime.now())
+    save_path = model_dir + "/svm-"+vectorization_type+timestamp
+
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+    saveSklearnModels(model,"model.pickle",save_path)
+    model_path = save_path + "/model.pickle"
+
+    #testing model
+    model_loaded = loadSklearnModel(model_path)
+    predictions, accuracy = getPredictionsAndAccuracy(x_test=x_test, y_test=y_test, model=model_loaded,returnAccuracy=True)
+
+    return predictions, accuracy
 def svm_tfidf(x_train, y_train):
 
     SVM_tfidf= Pipeline([('tfidf_vectorizer', TfidfVectorizer(analyzer= lambda x: x)), ('linear_svc', SVC(kernel ="linear"))])
@@ -175,6 +211,25 @@ def multiNomialBayes(x_train, y_train, vectorization_type):
     elif vectorization_type == "count":
         model = multiNomialBayes_count(x_train, y_train)
     return model
+
+def multiNomialBayes_train_and_test(x_train,y_train, x_test, y_test, vectorization_type, model_dir):
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)
+    model =multiNomialBayes(x_train, y_train, vectorization_type)
+    model_name = "model.pickle"
+    timestamp = '{:%Y%m%d%H%M%S}'.format(datetime.datetime.now())
+    save_path = model_dir + "/mulNB-"+vectorization_type+timestamp
+
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+    saveSklearnModels(model,"model.pickle",save_path)
+    model_path = save_path + "/model.pickle"
+
+    #testing model
+    model_loaded = loadSklearnModel(model_path)
+    predictions, accuracy = getPredictionsAndAccuracy(x_test=x_test, y_test=y_test, model=model_loaded,returnAccuracy=True)
+
+    return predictions, accuracy
 def multiNomialBayes_tfidf(x_train, y_train):
 
     mult_nb_tfidf = Pipeline([("tfidf_vectorizer", TfidfVectorizer(analyzer=lambda x: x)), ("multinomial nb", MultinomialNB())])
@@ -198,12 +253,9 @@ def getPredictionsAndAccuracy(x_test, y_test, model, returnAccuracy):
         print("Input var ikke riktig. Sjekk om modell og  testsett eksisterer")
     return predictions, accuracy
 
-def print_results(testName,res_vector,dewey_test):
 
-    return "Results "+testName+": "+str(accuracy_score(dewey_test,res_vector))
-
-def saveSklearnModels(model, output_filename):
-    model_save_file = open(output_filename,'wb')
+def saveSklearnModels(model, output_filename,save_path):
+    model_save_file = open(save_path+"/"+output_filename,'wb')
     dill.dump(model, model_save_file, -1)
     print("modell_lagret")
 def loadSklearnModel(modelpicklePath):
@@ -216,23 +268,25 @@ if __name__ == '__main__':
     dewey_train, text_train = get_articles("corpus_w_wiki/data_set_100/combined100_training")
     dewey_train = dewey_train[:10]
     text_train = text_train[:10]
-    #dewey_test , text_test = get_articles("test_min500")
-
-    #text_names, dewey_train, text_train = get_articles_from_folder("corpus_w_wiki/data_set_100/100_test")
     dewey_test, text_test = get_articles("corpus_w_wiki/data_set_100/100_test")
 
-    model= multiNomialBayes(text_train, dewey_train,"count")
 
-    predictions, accuracy = getPredictionsAndAccuracy(x_test = text_test, y_test = dewey_test, model = model, returnAccuracy = True)
-    #print(predictions)
+    # Kjører trening og test for logistisk regresjon
+    predictions, accuracy = logReg_train_and_test(x_train = text_train, y_train = dewey_train, x_test = text_test,
+                                                  y_test = dewey_test, vectorization_type = "count",
+                                                  model_dir= "logres_test" )
+
+    # Trener og tester Support vector machines
+    predictions, accuracy = svm_train_and_test(x_train=text_train, y_train=dewey_train, x_test=text_test,
+                                                  y_test=dewey_test, vectorization_type="tfidf",
+                                                  model_dir="svm_test", w2v_path = w2v_model_path)
     print(accuracy)
-    saveSklearnModels(model, "save_test.pckl")
-    model_loaded = loadSklearnModel("save_test.pckl")
-    predictions, accuracy = getPredictionsAndAccuracy(x_test=text_test, y_test=dewey_test, model=model_loaded,returnAccuracy=True)
-    #print(predictions)
+
+    # Trener og tester multiNomialBayes
+    predictions, accuracy = multiNomialBayes_train_and_test(x_train=text_train, y_train=dewey_train, x_test=text_test,
+                                                  y_test=dewey_test, vectorization_type="tfidf",
+                                                  model_dir="svm_test")
     print(accuracy)
-
-
 
     #dewey_train, text_train = get_articles("corpus_w_wiki/Datasett_100_w_wiki/train_w_wiki100")
 
