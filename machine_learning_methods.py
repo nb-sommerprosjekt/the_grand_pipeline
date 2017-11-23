@@ -10,7 +10,10 @@ from sklearn.naive_bayes import MultinomialNB, BernoulliNB
 from sklearn.linear_model import LogisticRegression
 from collections import defaultdict
 from sklearn.metrics import accuracy_score
+from sklearn.externals import joblib
 import os
+import dill
+import pickle
 
 class MeanEmbeddingVectorizer(object):
     def __init__(self, word2vec):
@@ -166,7 +169,6 @@ def svm_meanembedding(x_train,y_train, word2vec_model):
     return SVC_model_pipe
 
 def multiNomialBayes(x_train, y_train, vectorization_type):
-    print("ikke ready")
     model = None
     if vectorization_type == "tfidf":
         model = multiNomialBayes_tfidf(x_train, y_train)
@@ -200,12 +202,17 @@ def print_results(testName,res_vector,dewey_test):
 
     return "Results "+testName+": "+str(accuracy_score(dewey_test,res_vector))
 
-
+def saveSklearnModels(model, output_filename):
+    model_save_file = open(output_filename,'wb')
+    dill.dump(model, model_save_file, -1)
+    print("modell_lagret")
+def loadSklearnModel(modelpicklePath):
+    open_pickle_model_object = open(modelpicklePath, "rb")
+    model = dill.load(open_pickle_model_object)
+    return model
 if __name__ == '__main__':
-#    w2v_model = gensim.models.Doc2Vec.load("doc2vec_dir/100epoch/doc2vec_100.model")
-    #w2v_model = gensim.models.Doc2Vec.load("w2v_tgc/full.bin")
-    print("Model initialisert")
 
+    w2v_model_path = "w2v_tgc/full.bin"
     dewey_train, text_train = get_articles("corpus_w_wiki/data_set_100/combined100_training")
     dewey_train = dewey_train[:10]
     text_train = text_train[:10]
@@ -215,21 +222,21 @@ if __name__ == '__main__':
     dewey_test, text_test = get_articles("corpus_w_wiki/data_set_100/100_test")
 
     model= multiNomialBayes(text_train, dewey_train,"count")
+
     predictions, accuracy = getPredictionsAndAccuracy(x_test = text_test, y_test = dewey_test, model = model, returnAccuracy = True)
-
-
-    print(predictions)
+    #print(predictions)
     print(accuracy)
+    saveSklearnModels(model, "save_test.pckl")
+    model_loaded = loadSklearnModel("save_test.pckl")
+    predictions, accuracy = getPredictionsAndAccuracy(x_test=text_test, y_test=dewey_test, model=model_loaded,returnAccuracy=True)
+    #print(predictions)
+    print(accuracy)
+
+
+
     #dewey_train, text_train = get_articles("corpus_w_wiki/Datasett_100_w_wiki/train_w_wiki100")
 
-    ### Test 0 Etrees
-    # etree_model_pipe = Pipeline([("word2vec vectorizer", MeanEmbeddingVectorizer(w2v_model)),
-    #                       ("extra trees", ExtraTreesClassifier(n_estimators=400))])
-    # print("Etree-modellen er produsert")
-    # etree_model_pipe.fit(text_train,dewey_train)
-    # print("E-tree Modellen er trent. Predikering pågår.")
-    # i = 0
-    # etree_results = []
+
     # ## TEST 1 Etrees med tfidf
     # etree_tfidf_model_pipe = Pipeline([("word2vec vectorizer", TfidfEmbeddingVectorizer(w2v_model)),
     #                       ("extra trees", ExtraTreesClassifier(n_estimators=400))])
@@ -256,7 +263,7 @@ if __name__ == '__main__':
     # print("Test 5  Bernoulli nb med count vectorizer - Done")
     # # Test 5 multinomial bayes med tfidf
 
-    # print("Test 5 multinomial bayes med tfidf bernoulli - Done")
+    # print("Test 5 bernoulli bayes med tfidf bernoulli - Done")
     # # Test 6 bernoulli naive bayes med tfidf
     # bern_nb_tfidf = Pipeline([("tfidf_vectorizer", TfidfVectorizer(analyzer=lambda x: x)), ("bernoulli nb", BernoulliNB())])
     # bern_nb_tfidf.fit(text_train,dewey_train)
