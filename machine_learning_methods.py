@@ -111,7 +111,7 @@ def logReg(x_train, y_train, vectorization_type):
 
     if vectorization_type =="tfidf":
        model = logReg_tfidf(x_train, y_train)
-    elif vectorization_type == "count":
+    elif vectorization_type =="countVectorization":
        model = logReg_Count(x_train, y_train)
     else:
         print("Vectorization type is not existing. Alternatives: tfidf or count")
@@ -119,15 +119,46 @@ def logReg(x_train, y_train, vectorization_type):
     return model
 
 def logReg_tfidf(x_train, y_train):
-    logres_tfidf = Pipeline([("tfidf_vectorizer", TfidfVectorizer(analyzer=lambda x: x)), ("logres_tfidf", LogisticRegression())])
-    logres_tfidf.fit(text_train, dewey_train)
-    logres_tfidf_res = []
-    return logres_tfidf
+    logres_tfidf_model = Pipeline([("tfidf_vectorizer", TfidfVectorizer(analyzer=lambda x: x)), ("logres_tfidf", LogisticRegression())])
+    logres_tfidf_model.fit(x_train, y_train)
+    return logres_tfidf_model
 
 def logReg_Count(x_train, y_train):
-    logres = Pipeline([("count_vectorizer", CountVectorizer(analyzer=lambda x: x)), ("logres", LogisticRegression())])
-    logres.fit(text_train, dewey_train)
-    logres_res = []
+    logres_model = Pipeline([("count_vectorizer", CountVectorizer(analyzer=lambda x: x)), ("logres", LogisticRegression())])
+    logres_model.fit(x_train, y_train)
+    return logres_model
+
+def svm(x_train, y_train, vectorization_type, w2v = None):
+    model = None
+    if vectorization_type == "tfidf":
+        model = svm_tfidf(x_train, y_train)
+    elif vectorization_type == "mean_embedding":
+        model = svm_meanembedding(x_train, y_train, w2v)
+    elif vectorization_type == "count":
+        model = svm_count(x_train, y_train)
+    else:
+        print("Vectorization type is not existing. Alternatives: tfidf,count or meanembedding")
+        model = None
+
+    return model
+def svm_tfidf(x_train, y_train):
+
+    SVM_tfidf= Pipeline([('tfidf_vectorizer', TfidfVectorizer(analyzer= lambda x: x)), ('linear_svc', SVC(kernel ="linear"))])
+    SVM_tfidf.fit(x_train,y_train)
+    return SVM_tfidf
+
+def svm_count(x_train, y_train):
+
+    SVM_count= Pipeline([('count_vectorizer', CountVectorizer(analyzer= lambda x: x)), ('linear_svc', SVC(kernel ="linear"))])
+    SVM_count.fit(x_train,y_train)
+    return SVM_count
+
+def svm_meanembedding(x_train,y_train, word2vec_model):
+
+    SVC_model_pipe = Pipeline([("word2vec vectorizer", MeanEmbeddingVectorizer(word2vec_model)),
+                          ("SVM", SVC())])
+    SVC_model_pipe.fit(x_train,y_train)
+    return SVC_model_pipe
 
 def getPredictionsAndAccuracy(x_test, y_test, model, returnAccuracy):
     predictions = []
@@ -149,13 +180,17 @@ if __name__ == '__main__':
     print("Model initialisert")
 
     dewey_train, text_train = get_articles("corpus_w_wiki/data_set_100/combined100_training")
+    dewey_train = dewey_train[:10]
+    text_train = text_train[:10]
     #dewey_test , text_test = get_articles("test_min500")
 
     #text_names, dewey_train, text_train = get_articles_from_folder("corpus_w_wiki/data_set_100/100_test")
     dewey_test, text_test = get_articles("corpus_w_wiki/data_set_100/100_test")
 
-    model= logReg(x_train= text_train, y_train= dewey_train, vectorization_type= "count")
+    model= svm_meanembedding(text_train, dewey_train,w2v_model)
     predictions, accuracy = getPredictionsAndAccuracy(x_test = text_test, y_test = dewey_test, model = model, returnAccuracy = True)
+
+
     print(predictions)
     print(accuracy)
     #dewey_train, text_train = get_articles("corpus_w_wiki/Datasett_100_w_wiki/train_w_wiki100")
@@ -179,20 +214,12 @@ if __name__ == '__main__':
     #
     #
     # # TEST 2 SVC + embeddings
-    # SVC_model_pipe = Pipeline([("word2vec vectorizer", MeanEmbeddingVectorizer(w2v_model)),
-    #                       ("SVM", SVC())])
-    # print("Etree-modellen er produsert")
-    # SVC_model_pipe.fit(text_train,dewey_train)
-    # print("SVC modellen er trent. Predikering pågår.")
-    # SVC_results = []
+
     #
     #
     # ## TEST 3 SVM med TFIDF, uten embeddings
     #
-    # SVM_tfidf= Pipeline([('tfidf_vectorizer', TfidfVectorizer(analyzer= lambda x: x)), ('linear_svc', SVC(kernel ="linear"))])
-    # SVM_tfidf.fit(text_train,dewey_train)
-    # SVM_tfidfresults = []
-    # print("Test 3 SVM w/tfidf - Done ")
+
     # #Test 4 Multinomial Naive Bayes
     # mult_nb = Pipeline([("count_vectorizer", CountVectorizer(analyzer=lambda x: x)), ("multinomial nb", MultinomialNB())])
     # mult_nb.fit(text_train,dewey_train)
@@ -214,13 +241,6 @@ if __name__ == '__main__':
     # bern_nb_tfidf_res = []
     # print("Test 6 bernoulli naive bayes med tfidf - Done")
 
-    # logres_tfidf = Pipeline([("tfidf_vectorizer", TfidfVectorizer(analyzer=lambda x: x)), ("logres_tfidf", LogisticRegression())])
-    # logres_tfidf.fit(text_train, dewey_train)
-    # logres_tfidf_res = []
-    #
-    # logres = Pipeline([("count_vectorizer", CountVectorizer(analyzer=lambda x: x)), ("logres", LogisticRegression())])
-    # logres.fit(text_train, dewey_train)
-    # logres_res = []
 
     # for article in text_test:
         #etree_results.append(etree_model_pipe.predict([article]))
@@ -231,21 +251,9 @@ if __name__ == '__main__':
         # bern_nb_res.append(bern_nb.predict([article]))
         # mult_nb_tfidf_res.append(mult_nb_tfidf.predict([article]))
         # bern_nb_tfidf_res.append(bern_nb_tfidf.predict([article]))
-        # logres_tfidf_res.append(logres_tfidf.predict([article]))
-        # logres_res.append(logres.predict([article]))
-    # res_dict={
-    #     'etree' : accuracy_score(dewey_test,etree_results),
-    #     'etree_tfidf' : accuracy_score(dewey_test,etree_tfidf_results),
-    #     'SVC_embedding': accuracy_score(dewey_test,SVC_results),
-    #     'SVM tfid' : accuracy_score(dewey_test,SVM_tfidfresults),
-    #     'mult_nb' : accuracy_score(dewey_test,mult_nb_res),
-    #     'bern_nb' : accuracy_score(dewey_test,bern_nb_res),
-    #     'mult_nb_tfidf' : accuracy_score(dewey_test,mult_nb_tfidf_res),
-    #     'bern_nb_tfidf' : accuracy_score(dewey_test,bern_nb_tfidf_res)
-    # }
 
-    # plt.bar(list(res_dict.keys()),list(res_dict.values()),width = 1.0, color ='g')
-    # plt.show()
+
+
     # print(print_results("Etree-embedding", etree_results, dewey_test))
     # print(print_results("Etree-embedding w/tfidf",etree_tfidf_results,dewey_test))
     # print(print_results("SVC_embedding",SVC_results,dewey_test))
@@ -254,6 +262,5 @@ if __name__ == '__main__':
     # print(print_results("Bernoulli Naive Bayes", bern_nb_res, dewey_test))
     # print(print_results("Multinomial naive bayes w/tfidf", mult_nb_tfidf_res, dewey_test))
     # print(print_results("Bernoulli Naive Bayes w/tfidf", bern_nb_tfidf_res, dewey_test))
-    # print(print_results("logres_tfidf", logres_tfidf_res, dewey_test))
-    # print(print_results("logres", logres_res, dewey_test))
+
 
