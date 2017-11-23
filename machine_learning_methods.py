@@ -128,12 +128,17 @@ def logReg_Count(x_train, y_train):
     logres_model.fit(x_train, y_train)
     return logres_model
 
-def svm(x_train, y_train, vectorization_type, w2v = None):
+def svm(x_train, y_train, vectorization_type, w2v_path = None):
     model = None
     if vectorization_type == "tfidf":
         model = svm_tfidf(x_train, y_train)
     elif vectorization_type == "mean_embedding":
-        model = svm_meanembedding(x_train, y_train, w2v)
+        if w2v_path is not None:
+            word2vec_model = gensim.models.Doc2Vec.load(w2v_path)
+            model = svm_meanembedding(x_train, y_train, word2vec_model)
+        else:
+            print("word2vec modell finnes ikke. Test avsluttes")
+            model= None
     elif vectorization_type == "count":
         model = svm_count(x_train, y_train)
     else:
@@ -160,13 +165,35 @@ def svm_meanembedding(x_train,y_train, word2vec_model):
     SVC_model_pipe.fit(x_train,y_train)
     return SVC_model_pipe
 
+def multiNomialBayes(x_train, y_train, vectorization_type):
+    print("ikke ready")
+    model = None
+    if vectorization_type == "tfidf":
+        model = multiNomialBayes_tfidf(x_train, y_train)
+    elif vectorization_type == "count":
+        model = multiNomialBayes_count(x_train, y_train)
+    return model
+def multiNomialBayes_tfidf(x_train, y_train):
+
+    mult_nb_tfidf = Pipeline([("tfidf_vectorizer", TfidfVectorizer(analyzer=lambda x: x)), ("multinomial nb", MultinomialNB())])
+    mult_nb_tfidf.fit(x_train,y_train)
+    return mult_nb_tfidf
+def multiNomialBayes_count(x_train, y_train):
+    mult_nb = Pipeline([("count_vectorizer", CountVectorizer(analyzer=lambda x: x)), ("multinomial nb", MultinomialNB())])
+    mult_nb.fit(x_train,y_train)
+
+    return mult_nb
+
 def getPredictionsAndAccuracy(x_test, y_test, model, returnAccuracy):
     predictions = []
     accuracy = 0
-    for text in x_test:
-        predictions.append(model.predict([text]))
-    if returnAccuracy == True:
-        accuracy = accuracy_score(y_test,predictions)
+    if len(x_test) > 0 and len(y_test) >0 and model is not None:
+        for text in x_test:
+            predictions.append(model.predict([text]))
+        if returnAccuracy == True:
+            accuracy = accuracy_score(y_test,predictions)
+    else:
+        print("Input var ikke riktig. Sjekk om modell og  testsett eksisterer")
     return predictions, accuracy
 
 def print_results(testName,res_vector,dewey_test):
@@ -176,7 +203,7 @@ def print_results(testName,res_vector,dewey_test):
 
 if __name__ == '__main__':
 #    w2v_model = gensim.models.Doc2Vec.load("doc2vec_dir/100epoch/doc2vec_100.model")
-    w2v_model = gensim.models.Doc2Vec.load("w2v_tgc/full.bin")
+    #w2v_model = gensim.models.Doc2Vec.load("w2v_tgc/full.bin")
     print("Model initialisert")
 
     dewey_train, text_train = get_articles("corpus_w_wiki/data_set_100/combined100_training")
@@ -187,7 +214,7 @@ if __name__ == '__main__':
     #text_names, dewey_train, text_train = get_articles_from_folder("corpus_w_wiki/data_set_100/100_test")
     dewey_test, text_test = get_articles("corpus_w_wiki/data_set_100/100_test")
 
-    model= svm_meanembedding(text_train, dewey_train,w2v_model)
+    model= multiNomialBayes(text_train, dewey_train,"count")
     predictions, accuracy = getPredictionsAndAccuracy(x_test = text_test, y_test = dewey_test, model = model, returnAccuracy = True)
 
 
@@ -221,19 +248,14 @@ if __name__ == '__main__':
     #
 
     # #Test 4 Multinomial Naive Bayes
-    # mult_nb = Pipeline([("count_vectorizer", CountVectorizer(analyzer=lambda x: x)), ("multinomial nb", MultinomialNB())])
-    # mult_nb.fit(text_train,dewey_train)
-    # mult_nb_res = []
-    # print("Test 4 Multinomial Naive Bayes - Done")
+    # print("Test 4 Bernoulli Naive Bayes - Done")
     # # Test 5 Bernoulli nb med count vectorizer
     # bern_nb = Pipeline([("count_vectorizer", CountVectorizer(analyzer=lambda x: x)), ("bernoulli nb", BernoulliNB())])
     # bern_nb.fit(text_train, dewey_train)
     # bern_nb_res = []
     # print("Test 5  Bernoulli nb med count vectorizer - Done")
     # # Test 5 multinomial bayes med tfidf
-    # mult_nb_tfidf = Pipeline([("tfidf_vectorizer", TfidfVectorizer(analyzer=lambda x: x)), ("multinomial nb", MultinomialNB())])
-    # mult_nb_tfidf.fit(text_train,dewey_train)
-    # mult_nb_tfidf_res = []
+
     # print("Test 5 multinomial bayes med tfidf bernoulli - Done")
     # # Test 6 bernoulli naive bayes med tfidf
     # bern_nb_tfidf = Pipeline([("tfidf_vectorizer", TfidfVectorizer(analyzer=lambda x: x)), ("bernoulli nb", BernoulliNB())])
@@ -245,22 +267,17 @@ if __name__ == '__main__':
     # for article in text_test:
         #etree_results.append(etree_model_pipe.predict([article]))
         # etree_tfidf_results.append(etree_tfidf_model_pipe.predict([article]))
-        # SVC_results.append(SVC_model_pipe.predict([article]))
-        # SVM_tfidfresults.append(SVM_tfidf.predict([article]))
-        # mult_nb_res.append(mult_nb.predict([article]))
+
+
         # bern_nb_res.append(bern_nb.predict([article]))
-        # mult_nb_tfidf_res.append(mult_nb_tfidf.predict([article]))
         # bern_nb_tfidf_res.append(bern_nb_tfidf.predict([article]))
 
 
 
     # print(print_results("Etree-embedding", etree_results, dewey_test))
     # print(print_results("Etree-embedding w/tfidf",etree_tfidf_results,dewey_test))
-    # print(print_results("SVC_embedding",SVC_results,dewey_test))
-    # print(print_results("SVM_tfidf_test", SVM_tfidfresults, dewey_test))
-    # print(print_results("Multinomial naive bayes", mult_nb_res, dewey_test))
+
     # print(print_results("Bernoulli Naive Bayes", bern_nb_res, dewey_test))
-    # print(print_results("Multinomial naive bayes w/tfidf", mult_nb_tfidf_res, dewey_test))
     # print(print_results("Bernoulli Naive Bayes w/tfidf", bern_nb_tfidf_res, dewey_test))
 
 
