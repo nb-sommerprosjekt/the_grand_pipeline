@@ -119,7 +119,7 @@ def logReg(x_train, y_train, vectorization_type):
         print("Vectorization type is not existing. Alternatives: tfidf or count")
         model = None
     return model
-def logReg_train_and_test(x_train,y_train, x_test, y_test, vectorization_type, model_dir):
+def logReg_train_and_test(x_train,y_train, x_test, y_test, vectorization_type, model_dir, k_preds =3):
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
     model =logReg(x_train, y_train, vectorization_type)
@@ -134,9 +134,9 @@ def logReg_train_and_test(x_train,y_train, x_test, y_test, vectorization_type, m
 
     #testing model
     model_loaded = loadSklearnModel(model_path)
-    predictions, accuracy = getPredictionsAndAccuracy(x_test=x_test, y_test=y_test, model=model_loaded,returnAccuracy=True)
+    predictions, accuracy, topN = getPredictionsAndAccuracy(x_test=x_test, y_test=y_test, model=model_loaded,returnAccuracy=True, Npreds= k_preds)
 
-    return predictions, accuracy
+    return predictions, accuracy, topN
 
 def logReg_tfidf(x_train, y_train):
     logres_tfidf_model = Pipeline([("tfidf_vectorizer", TfidfVectorizer(analyzer=lambda x: x)), ("logres_tfidf", LogisticRegression())])
@@ -166,7 +166,7 @@ def svm(x_train, y_train, vectorization_type, w2v_path = None):
         model = None
 
     return model
-def svm_train_and_test(x_train,y_train, x_test, y_test, vectorization_type, model_dir,  w2v_path = None):
+def svm_train_and_test(x_train,y_train, x_test, y_test, vectorization_type, model_dir,  w2v_path = None, k_preds=3):
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
 
@@ -182,18 +182,18 @@ def svm_train_and_test(x_train,y_train, x_test, y_test, vectorization_type, mode
 
     #testing model
     model_loaded = loadSklearnModel(model_path)
-    predictions, accuracy = getPredictionsAndAccuracy(x_test=x_test, y_test=y_test, model=model_loaded,returnAccuracy=True)
+    predictions, accuracy , topN= getPredictionsAndAccuracy(x_test=x_test, y_test=y_test, model=model_loaded,returnAccuracy=True, Npreds = k_preds)
 
-    return predictions, accuracy
+    return predictions, accuracy, topN
 def svm_tfidf(x_train, y_train):
 
-    SVM_tfidf= Pipeline([('tfidf_vectorizer', TfidfVectorizer(analyzer= lambda x: x)), ('linear_svc', SVC(kernel ="linear"))])
+    SVM_tfidf= Pipeline([('tfidf_vectorizer', TfidfVectorizer(analyzer= lambda x: x)), ('linear_svc', SVC(kernel ="linear", probability= True))])
     SVM_tfidf.fit(x_train,y_train)
     return SVM_tfidf
 
 def svm_count(x_train, y_train):
 
-    SVM_count= Pipeline([('count_vectorizer', CountVectorizer(analyzer= lambda x: x)), ('linear_svc', SVC(kernel ="linear"))])
+    SVM_count= Pipeline([('count_vectorizer', CountVectorizer(analyzer= lambda x: x)), ('linear_svc', SVC(kernel ="linear", probability = True))])
     SVM_count.fit(x_train,y_train)
     return SVM_count
 
@@ -212,7 +212,7 @@ def multiNomialBayes(x_train, y_train, vectorization_type):
         model = multiNomialBayes_count(x_train, y_train)
     return model
 
-def multiNomialBayes_train_and_test(x_train,y_train, x_test, y_test, vectorization_type, model_dir):
+def multiNomialBayes_train_and_test(x_train,y_train, x_test, y_test, vectorization_type, model_dir, k_preds=3):
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
     model =multiNomialBayes(x_train, y_train, vectorization_type)
@@ -227,9 +227,9 @@ def multiNomialBayes_train_and_test(x_train,y_train, x_test, y_test, vectorizati
 
     #testing model
     model_loaded = loadSklearnModel(model_path)
-    predictions, accuracy = getPredictionsAndAccuracy(x_test=x_test, y_test=y_test, model=model_loaded,returnAccuracy=True)
+    predictions, accuracy, topN = getPredictionsAndAccuracy(x_test=x_test, y_test=y_test, model=model_loaded,returnAccuracy=True,Npreds= k_preds)
 
-    return predictions, accuracy
+    return predictions, accuracy, topN
 def multiNomialBayes_tfidf(x_train, y_train):
 
     mult_nb_tfidf = Pipeline([("tfidf_vectorizer", TfidfVectorizer(analyzer=lambda x: x)), ("multinomial nb", MultinomialNB())])
@@ -241,17 +241,25 @@ def multiNomialBayes_count(x_train, y_train):
 
     return mult_nb
 
-def getPredictionsAndAccuracy(x_test, y_test, model, returnAccuracy):
+def getPredictionsAndAccuracy(x_test, y_test, model, returnAccuracy, Npreds):
     predictions = []
+    topNpredictions = []
     accuracy = 0
     if len(x_test) > 0 and len(y_test) >0 and model is not None:
         for text in x_test:
+            topN_temp =[]
             predictions.append(model.predict([text]))
+            pred_proba = model.predict_proba([text])
+            n = Npreds
+            topN_prob_indexes = np.argsort(pred_proba)[:,:-n-1:-1]
+            for val in topN_prob_indexes:
+                topN_temp.append(model.classes_[val])
+            topNpredictions.append(topN_temp)
         if returnAccuracy == True:
             accuracy = accuracy_score(y_test,predictions)
     else:
         print("Input var ikke riktig. Sjekk om modell og  testsett eksisterer")
-    return predictions, accuracy
+    return predictions, accuracy, topNpredictions
 
 
 def saveSklearnModels(model, output_filename,save_path):
@@ -272,27 +280,29 @@ if __name__ == '__main__':
 
 
     # Kjører trening og test for logistisk regresjon
-    predictions, accuracy = logReg_train_and_test(x_train = text_train, y_train = dewey_train, x_test = text_test,
+    predictions, accuracy, topN = logReg_train_and_test(x_train = text_train, y_train = dewey_train, x_test = text_test,
                                                   y_test = dewey_test, vectorization_type = "count",
-                                                  model_dir= "logres_test" )
+                                                  model_dir= "logres_test", k_preds= 5 )
+
 
     # Trener og tester Support vector machines
-    predictions, accuracy = svm_train_and_test(x_train=text_train, y_train=dewey_train, x_test=text_test,
+    predictions, accuracy, topN = svm_train_and_test(x_train=text_train, y_train=dewey_train, x_test=text_test,
                                                   y_test=dewey_test, vectorization_type="tfidf",
                                                   model_dir="svm_test", w2v_path = w2v_model_path)
     print(accuracy)
 
     # Trener og tester multiNomialBayes
-    predictions, accuracy = multiNomialBayes_train_and_test(x_train=text_train, y_train=dewey_train, x_test=text_test,
+    predictions, accuracy, topN = multiNomialBayes_train_and_test(x_train=text_train, y_train=dewey_train, x_test=text_test,
                                                   y_test=dewey_test, vectorization_type="tfidf",
                                                   model_dir="svm_test")
     print(accuracy)
+    print(topN)
 
-    #dewey_train, text_train = get_articles("corpus_w_wiki/Datasett_100_w_wiki/train_w_wiki100")
+    ### UNDER LIGGER FORSKJELLIGE MODULER SOM SKAL IMPLEMENTERES PÅ ET SENERE TIDSPUNKT!
 
 
     # ## TEST 1 Etrees med tfidf
-    # etree_tfidf_model_pipe = Pipeline([("word2vec vectorizer", TfidfEmbeddingVectorizer(w2v_model)),
+    # etree_tfidf_m odel_pipe = Pipeline([("word2vec vectorizer", TfidfEmbeddingVectorizer(w2v_model)),
     #                       ("extra trees", ExtraTreesClassifier(n_estimators=400))])
     # print("Etree-modellen er produsert")
     # etree_tfidf_model_pipe.fit(text_train,dewey_train)
