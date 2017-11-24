@@ -109,9 +109,8 @@ def get_articles_from_folder(folder):
     #print(text_names)
     return text_names, dewey_array, docs
 
-def logReg(x_train, y_train, vectorization_type, penalty="l2", dual=False, tol=0.0001, C=1.0, fit_intercept=True, intercept_scaling=1, class_weight=None, random_state=None,
-           solver="liblinear", max_iter=100, multi_class="ovr",
-           verbose=0, warm_start=False, n_jobs=1):
+def logReg(x_train, y_train, vectorization_type, penalty, dual, tol, C, fit_intercept, intercept_scaling,
+           class_weight, random_state,solver, max_iter, multi_class,verbose, warm_start, n_jobs):
 
     if vectorization_type =="tfidf":
        model = logReg_tfidf(x_train, y_train,penalty, dual, tol, C, fit_intercept,
@@ -173,29 +172,42 @@ def logReg_Count(x_train, y_train, penalty, dual, tol, C, fit_intercept,
     logres_model.fit(x_train, y_train)
     return logres_model
 
-def svm(x_train, y_train, vectorization_type, w2v_path = None):
+def svm(x_train, y_train, vectorization_type, w2v_path,  C, kernel, degree, gamma, coef0, shrinking, probability,
+                       tol, cache_size, class_weight, verbose, max_iter,
+                       decision_function_shape, random_state):
     model = None
     if vectorization_type == "tfidf":
-        model = svm_tfidf(x_train, y_train)
+        model = svm_tfidf(x_train, y_train,  C, kernel, degree, gamma, coef0, shrinking, probability,
+                       tol, cache_size, class_weight, verbose, max_iter,
+                       decision_function_shape, random_state)
     elif vectorization_type == "mean_embedding":
         if w2v_path is not None:
             word2vec_model = gensim.models.Doc2Vec.load(w2v_path)
-            model = svm_meanembedding(x_train, y_train, word2vec_model)
+            model = svm_meanembedding(x_train, y_train, word2vec_model,  C, kernel, degree, gamma, coef0, shrinking, probability,
+                       tol, cache_size, class_weight, verbose, max_iter,
+                       decision_function_shape, random_state)
         else:
             print("word2vec modell finnes ikke. Test avsluttes")
             model= None
     elif vectorization_type == "count":
-        model = svm_count(x_train, y_train)
+        model = svm_count(x_train, y_train,  C, kernel, degree, gamma, coef0, shrinking, probability,
+                       tol, cache_size, class_weight, verbose, max_iter,
+                       decision_function_shape, random_state)
     else:
         print("Vectorization type is not existing. Alternatives: tfidf,count or meanembedding")
         model = None
 
     return model
-def svm_train_and_test(x_train,y_train, x_test, y_test, vectorization_type, model_dir,  w2v_path = None, k_preds=3):
+def svm_train_and_test(x_train,y_train, x_test, y_test, vectorization_type, model_dir,  w2v_path = None, k_preds=3,
+                       C=1.0, kernel="rbf", degree=3, gamma="auto", coef0=0.0, shrinking=True, probability=True,
+                       tol=0.001, cache_size=200, class_weight=None, verbose=False, max_iter=-1,
+                       decision_function_shape="ovr", random_state=None):
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
 
-    model =svm(x_train, y_train, vectorization_type, w2v_path= w2v_path)
+    model =svm(x_train, y_train, vectorization_type, w2v_path, C, kernel, degree, gamma, coef0, shrinking, probability,
+                       tol, cache_size, class_weight, verbose, max_iter,
+                       decision_function_shape, random_state)
 
     timestamp = '{:%Y%m%d%H%M%S}'.format(datetime.datetime.now())
     save_path = model_dir + "/svm-"+vectorization_type+timestamp
@@ -210,22 +222,33 @@ def svm_train_and_test(x_train,y_train, x_test, y_test, vectorization_type, mode
     predictions, accuracy , topN= getPredictionsAndAccuracy(x_test=x_test, y_test=y_test, model=model_loaded,returnAccuracy=True, Npreds = k_preds)
 
     return predictions, accuracy, topN
-def svm_tfidf(x_train, y_train):
+def svm_tfidf(x_train, y_train,  C, kernel, degree, gamma, coef0, shrinking, probability,
+                       tol, cache_size, class_weight, verbose, max_iter,
+                       decision_function_shape, random_state):
 
-    SVM_tfidf= Pipeline([('tfidf_vectorizer', TfidfVectorizer(analyzer= lambda x: x)), ('linear_svc', SVC(kernel ="linear", probability= True))])
+    SVM_tfidf= Pipeline([('tfidf_vectorizer', TfidfVectorizer(analyzer= lambda x: x)), ('linear_svc', SVC( C, kernel, degree, gamma, coef0, shrinking, probability,
+                       tol, cache_size, class_weight, verbose, max_iter,
+                       decision_function_shape, random_state))])
     SVM_tfidf.fit(x_train,y_train)
     return SVM_tfidf
 
-def svm_count(x_train, y_train):
-
-    SVM_count= Pipeline([('count_vectorizer', CountVectorizer(analyzer= lambda x: x)), ('linear_svc', SVC(kernel ="linear", probability = True))])
+def svm_count(x_train, y_train,  C, kernel, degree, gamma, coef0, shrinking, probability,
+                       tol, cache_size, class_weight, verbose, max_iter,
+                       decision_function_shape, random_state):
+    SVM_count= Pipeline([('count_vectorizer', CountVectorizer(analyzer= lambda x: x)),('linear_svc', SVC( C, kernel, degree, gamma, coef0, shrinking, probability,
+                       tol, cache_size, class_weight, verbose, max_iter,
+                       decision_function_shape, random_state))])
     SVM_count.fit(x_train,y_train)
     return SVM_count
 
-def svm_meanembedding(x_train,y_train, word2vec_model):
+def svm_meanembedding(x_train,y_train, word2vec_model,  C, kernel, degree, gamma, coef0, shrinking, probability,
+                       tol, cache_size, class_weight, verbose, max_iter,
+                       decision_function_shape, random_state):
 
     SVC_model_pipe = Pipeline([("word2vec vectorizer", MeanEmbeddingVectorizer(word2vec_model)),
-                          ("SVM", SVC())])
+                          ("SVM", SVC( C, kernel, degree, gamma, coef0, shrinking, probability,
+                       tol, cache_size, class_weight, verbose, max_iter,
+                       decision_function_shape, random_state))])
     SVC_model_pipe.fit(x_train,y_train)
     return SVC_model_pipe
 
@@ -299,38 +322,38 @@ if __name__ == '__main__':
 
     w2v_model_path = "w2v_tgc/full.bin"
     dewey_train, text_train = get_articles("corpus_w_wiki/data_set_100/combined100_training")
-    dewey_train = dewey_train[:10]
-    text_train = text_train[:10]
+    dewey_train = dewey_train
+    text_train = text_train
     dewey_test, text_test = get_articles("corpus_w_wiki/data_set_100/100_test")
 
 
     # Kjører trening og test for logistisk regresjon
     predictions, accuracy, topN = logReg_train_and_test(x_train = text_train, y_train = dewey_train, x_test = text_test,
                                                   y_test = dewey_test, vectorization_type = "count",
-                                                  model_dir= "logres_test", k_preds= 5, solver = "newton-cg")
+                                                  model_dir= "logres_test", k_preds= 5, solver = "newton-cg", max_iter= 100)
     print(accuracy)
     predictions, accuracy, topN = logReg_train_and_test(x_train = text_train, y_train = dewey_train, x_test = text_test,
                                                   y_test = dewey_test, vectorization_type = "tfidf",
                                                   model_dir= "logres_test", k_preds= 5, solver = "newton-cg")
     print(accuracy)
-    # # Trener og tester Support vector machines
-    # predictions, accuracy, topN = svm_train_and_test(x_train=text_train, y_train=dewey_train, x_test=text_test,
-    #                                               y_test=dewey_test, vectorization_type="tfidf",
-    #                                               model_dir="svm_test", w2v_path = w2v_model_path)
-    # print(accuracy)
-    #
-    # # Trener og tester multiNomialBayes
-    # predictions, accuracy, topN = multiNomialBayes_train_and_test(x_train=text_train, y_train=dewey_train, x_test=text_test,
-    #                                               y_test=dewey_test, vectorization_type="tfidf",
-    #                                               model_dir="svm_test")
-    # print(accuracy)
+    # Trener og tester Support vector machines
+    predictions, accuracy, topN = svm_train_and_test(x_train=text_train, y_train=dewey_train, x_test=text_test,
+                                                  y_test=dewey_test, vectorization_type="mean_embedding",
+                                                  model_dir="svm_test", w2v_path = w2v_model_path)
+    print(accuracy)
+
+    # Trener og tester multiNomialBayes
+    predictions, accuracy, topN = multiNomialBayes_train_and_test(x_train=text_train, y_train=dewey_train, x_test=text_test,
+                                                  y_test=dewey_test, vectorization_type="count",
+                                                  model_dir="multinomial")
+    print(accuracy)
     # print(topN)
 
     ### UNDER LIGGER FORSKJELLIGE MODULER SOM SKAL IMPLEMENTERES PÅ ET SENERE TIDSPUNKT!
 
 
     # ## TEST 1 Etrees med tfidf
-    # etree_tfidf_m odel_pipe = Pipeline([("word2vec vectorizer", TfidfEmbeddingVectorizer(w2v_model)),
+    # etree_tfidf_model_pipe = Pipeline([("word2vec vectorizer", TfidfEmbeddingVectorizer(w2v_model)),
     #                       ("extra trees", ExtraTreesClassifier(n_estimators=400))])
     # print("Etree-modellen er produsert")
     # etree_tfidf_model_pipe.fit(text_train,dewey_train)
