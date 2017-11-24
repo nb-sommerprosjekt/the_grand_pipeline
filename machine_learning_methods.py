@@ -229,18 +229,18 @@ def svm_meanembedding(x_train,y_train, word2vec_model):
     SVC_model_pipe.fit(x_train,y_train)
     return SVC_model_pipe
 
-def multiNomialBayes(x_train, y_train, vectorization_type):
+def multiNomialBayes(x_train, y_train, vectorization_type, alpha, fit_prior, class_prior):
     model = None
     if vectorization_type == "tfidf":
-        model = multiNomialBayes_tfidf(x_train, y_train)
+        model = multiNomialBayes_tfidf(x_train, y_train, alpha, fit_prior, class_prior)
     elif vectorization_type == "count":
-        model = multiNomialBayes_count(x_train, y_train)
+        model = multiNomialBayes_count(x_train, y_train, alpha, fit_prior, class_prior)
     return model
 
-def multiNomialBayes_train_and_test(x_train,y_train, x_test, y_test, vectorization_type, model_dir, k_preds=3):
+def multiNomialBayes_train_and_test(x_train,y_train, x_test, y_test, vectorization_type, model_dir, k_preds=3, alpha=1.0, fit_prior=True, class_prior=None):
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
-    model =multiNomialBayes(x_train, y_train, vectorization_type)
+    model =multiNomialBayes(x_train, y_train, vectorization_type, alpha, fit_prior, class_prior)
     model_name = "model.pickle"
     timestamp = '{:%Y%m%d%H%M%S}'.format(datetime.datetime.now())
     save_path = model_dir + "/mulNB-"+vectorization_type+timestamp
@@ -255,13 +255,13 @@ def multiNomialBayes_train_and_test(x_train,y_train, x_test, y_test, vectorizati
     predictions, accuracy, topN = getPredictionsAndAccuracy(x_test=x_test, y_test=y_test, model=model_loaded,returnAccuracy=True,Npreds= k_preds)
 
     return predictions, accuracy, topN
-def multiNomialBayes_tfidf(x_train, y_train):
+def multiNomialBayes_tfidf(x_train, y_train, alpha, fit_prior, class_prior):
 
-    mult_nb_tfidf = Pipeline([("tfidf_vectorizer", TfidfVectorizer(analyzer=lambda x: x)), ("multinomial nb", MultinomialNB())])
+    mult_nb_tfidf = Pipeline([("tfidf_vectorizer", TfidfVectorizer(analyzer=lambda x: x)), ("multinomial nb", MultinomialNB(alpha, fit_prior, class_prior))])
     mult_nb_tfidf.fit(x_train,y_train)
     return mult_nb_tfidf
-def multiNomialBayes_count(x_train, y_train):
-    mult_nb = Pipeline([("count_vectorizer", CountVectorizer(analyzer=lambda x: x)), ("multinomial nb", MultinomialNB())])
+def multiNomialBayes_count(x_train, y_train, alpha, fit_prior, class_prior):
+    mult_nb = Pipeline([("count_vectorizer", CountVectorizer(analyzer=lambda x: x)), ("multinomial nb", MultinomialNB(alpha, fit_prior, class_prior))])
     mult_nb.fit(x_train,y_train)
 
     return mult_nb
