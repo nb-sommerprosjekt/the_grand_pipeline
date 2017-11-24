@@ -109,20 +109,33 @@ def get_articles_from_folder(folder):
     #print(text_names)
     return text_names, dewey_array, docs
 
-def logReg(x_train, y_train, vectorization_type):
+def logReg(x_train, y_train, vectorization_type, penalty="l2", dual=False, tol=0.0001, C=1.0, fit_intercept=True, intercept_scaling=1, class_weight=None, random_state=None,
+           solver="liblinear", max_iter=100, multi_class="ovr",
+           verbose=0, warm_start=False, n_jobs=1):
 
     if vectorization_type =="tfidf":
-       model = logReg_tfidf(x_train, y_train)
+       model = logReg_tfidf(x_train, y_train,penalty, dual, tol, C, fit_intercept,
+                            intercept_scaling, class_weight, random_state,
+                            solver, max_iter, multi_class,
+                            verbose, warm_start, n_jobs)
     elif vectorization_type =="count":
-       model = logReg_Count(x_train, y_train)
+       model = logReg_Count(x_train, y_train,penalty, dual, tol, C, fit_intercept,
+                            intercept_scaling, class_weight, random_state,
+                            solver, max_iter, multi_class,
+                            verbose, warm_start, n_jobs)
     else:
         print("Vectorization type is not existing. Alternatives: tfidf or count")
         model = None
     return model
-def logReg_train_and_test(x_train,y_train, x_test, y_test, vectorization_type, model_dir, k_preds =3):
+def logReg_train_and_test(x_train,y_train, x_test, y_test, vectorization_type, model_dir, k_preds =3, penalty="l2", dual=False, tol=0.0001, C=1.0, fit_intercept=True, intercept_scaling=1, class_weight=None,
+                          random_state=None, solver="liblinear", max_iter=100, multi_class="ovr",
+                          verbose=0, warm_start=False, n_jobs=1):
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
-    model =logReg(x_train, y_train, vectorization_type)
+    model =logReg(x_train, y_train, vectorization_type, penalty=penalty, dual=dual,
+                    tol=tol, C=C, fit_intercept=fit_intercept,intercept_scaling=intercept_scaling, class_weight=class_weight,
+                    random_state=random_state, solver=solver,
+                    max_iter=max_iter, multi_class=multi_class, verbose=verbose, warm_start=warm_start, n_jobs=n_jobs)
     model_name = "model.pickle"
     timestamp = '{:%Y%m%d%H%M%S}'.format(datetime.datetime.now())
     save_path = model_dir + "/logReg-"+vectorization_type+timestamp
@@ -138,13 +151,25 @@ def logReg_train_and_test(x_train,y_train, x_test, y_test, vectorization_type, m
 
     return predictions, accuracy, topN
 
-def logReg_tfidf(x_train, y_train):
-    logres_tfidf_model = Pipeline([("tfidf_vectorizer", TfidfVectorizer(analyzer=lambda x: x)), ("logres_tfidf", LogisticRegression())])
+def logReg_tfidf(x_train, y_train, penalty, dual, tol, C, fit_intercept, intercept_scaling, class_weight,
+                 random_state, solver, max_iter, multi_class,
+                 verbose, warm_start, n_jobs):
+    logres_tfidf_model = Pipeline([("tfidf_vectorizer", TfidfVectorizer(analyzer=lambda x: x)), ("logres_tfidf", LogisticRegression(penalty=penalty, dual=dual,
+                                                                                            tol=tol, C=C, fit_intercept=fit_intercept,
+                                                                                            intercept_scaling=intercept_scaling, class_weight=class_weight,
+                                                                                            random_state=random_state, solver=solver,
+                                                                                            max_iter=max_iter, multi_class=multi_class, verbose=verbose, warm_start=warm_start, n_jobs=n_jobs))])
     logres_tfidf_model.fit(x_train, y_train)
     return logres_tfidf_model
 
-def logReg_Count(x_train, y_train):
-    logres_model = Pipeline([("count_vectorizer", CountVectorizer(analyzer=lambda x: x)), ("logres", LogisticRegression())])
+def logReg_Count(x_train, y_train, penalty, dual, tol, C, fit_intercept,
+                 intercept_scaling, class_weight, random_state, solver,
+                 max_iter, multi_class, verbose, warm_start, n_jobs):
+    logres_model = Pipeline([("count_vectorizer", CountVectorizer(analyzer=lambda x: x)), ("logres", LogisticRegression(penalty=penalty, dual=dual,
+                                                                                            tol=tol, C=C, fit_intercept=fit_intercept,
+                                                                                            intercept_scaling=intercept_scaling, class_weight=class_weight,
+                                                                                            random_state=random_state, solver=solver,
+                                                                                            max_iter=max_iter, multi_class=multi_class, verbose=verbose, warm_start=warm_start, n_jobs=n_jobs))])
     logres_model.fit(x_train, y_train)
     return logres_model
 
@@ -282,21 +307,24 @@ if __name__ == '__main__':
     # Kjører trening og test for logistisk regresjon
     predictions, accuracy, topN = logReg_train_and_test(x_train = text_train, y_train = dewey_train, x_test = text_test,
                                                   y_test = dewey_test, vectorization_type = "count",
-                                                  model_dir= "logres_test", k_preds= 5 )
-
-
-    # Trener og tester Support vector machines
-    predictions, accuracy, topN = svm_train_and_test(x_train=text_train, y_train=dewey_train, x_test=text_test,
-                                                  y_test=dewey_test, vectorization_type="tfidf",
-                                                  model_dir="svm_test", w2v_path = w2v_model_path)
+                                                  model_dir= "logres_test", k_preds= 5, solver = "newton-cg")
     print(accuracy)
-
-    # Trener og tester multiNomialBayes
-    predictions, accuracy, topN = multiNomialBayes_train_and_test(x_train=text_train, y_train=dewey_train, x_test=text_test,
-                                                  y_test=dewey_test, vectorization_type="tfidf",
-                                                  model_dir="svm_test")
+    predictions, accuracy, topN = logReg_train_and_test(x_train = text_train, y_train = dewey_train, x_test = text_test,
+                                                  y_test = dewey_test, vectorization_type = "tfidf",
+                                                  model_dir= "logres_test", k_preds= 5, solver = "newton-cg")
     print(accuracy)
-    print(topN)
+    # # Trener og tester Support vector machines
+    # predictions, accuracy, topN = svm_train_and_test(x_train=text_train, y_train=dewey_train, x_test=text_test,
+    #                                               y_test=dewey_test, vectorization_type="tfidf",
+    #                                               model_dir="svm_test", w2v_path = w2v_model_path)
+    # print(accuracy)
+    #
+    # # Trener og tester multiNomialBayes
+    # predictions, accuracy, topN = multiNomialBayes_train_and_test(x_train=text_train, y_train=dewey_train, x_test=text_test,
+    #                                               y_test=dewey_test, vectorization_type="tfidf",
+    #                                               model_dir="svm_test")
+    # print(accuracy)
+    # print(topN)
 
     ### UNDER LIGGER FORSKJELLIGE MODULER SOM SKAL IMPLEMENTERES PÅ ET SENERE TIDSPUNKT!
 
