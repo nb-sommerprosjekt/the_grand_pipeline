@@ -1,15 +1,24 @@
 import fasttext
 import operator
+from evaluator2 import calculate_f1
 
 
-def evaluate_fasttext(test_file,classifier):
+def evaluate_fasttext(test_file,classifier,top_k_labels):
     return_text=""
     texts=[]
+    correct=[]
     #test_file_name="corpus_test2-2.txt"
     with open(test_file, "r")as f:
         for line in f.readlines():
             texts.append(line)
-    labels = classifier.predict_proba(texts, k=1)
+            correct.append(line.split(" ")[0].replace("__label__",""))
+    guesses = classifier.predict(texts, k=top_k_labels) #labels
+    # guesses=[]
+    # for label in labels:
+    #
+    #     guesses.append(label[0][0])
+    return calculate_f1(correct,guesses)
+
 
     accuracy = {}
     for i, article in enumerate(texts):

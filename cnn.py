@@ -2,6 +2,7 @@ from keras.preprocessing.text import Tokenizer, one_hot
 from keras.preprocessing.sequence import pad_sequences
 from keras.utils import to_categorical
 from keras.layers import Input, Conv1D, MaxPooling1D, Flatten, Dense
+from keras import backend as K
 import numpy as np
 import gensim
 from keras.layers import Embedding
@@ -118,6 +119,7 @@ def train_cnn(training_set, VOCAB_SIZE, MAX_SEQUENCE_LENGTH,EPOCHS, FOLDER_TO_SA
 
     #Saving model
     model.save(save_model_path)
+    K.clear_session()
     print("modell er nå lagret i folder: {}".format(model_directory))
 
     #Saving tokenizer
@@ -210,21 +212,28 @@ def run_cnn_tests(TRAINING_SET, TEST_SET, VOCAB_VECTOR, SEQUENCE_LENGTH_VECTOR, 
     for vocab_test in VOCAB_VECTOR:
         for sequence_length_test in SEQUENCE_LENGTH_VECTOR:
             for epoch_test in EPOCHS:
-                test_mod_dir=train_cnn(TRAINING_SET,
-                    VOCAB_SIZE=vocab_test,
-                    MAX_SEQUENCE_LENGTH=sequence_length_test,
-                    EPOCHS=epoch_test,
-                    FOLDER_TO_SAVE_MODEL=FOLDER_TO_SAVE_MODEL,
-                    loss_model=LOSS_MODEL,
-                    VALIDATION_SPLIT= validation_split,
-                    word2vec_file_name= word2vec_model
-                    )
+                run_training=True
+                if run_training:
+                    try:
+                        test_mod_dir=train_cnn(TRAINING_SET,
+                                               VOCAB_SIZE=vocab_test,
+                                               MAX_SEQUENCE_LENGTH=sequence_length_test,
+                                               EPOCHS=epoch_test,
+                                               FOLDER_TO_SAVE_MODEL=FOLDER_TO_SAVE_MODEL,
+                                               loss_model=LOSS_MODEL,
+                                               VALIDATION_SPLIT= validation_split,
+                                               word2vec_file_name= word2vec_model
+                                               )
+                        #run_training=False
+                    except TypeError('NoneType') as e:
+                        print(e)
+                        print("Trying again")
                 try:
                     cnn_pred(TEST_SET, test_mod_dir, k_top_labels)
                 except ValueError:
 
-                        print("Noe gikk galt, prøver gjenkjenning på nytt.")
-                        cnn_pred(TEST_SET, test_mod_dir, k_top_labels)
+                    print("Noe gikk galt, prøver gjenkjenning på nytt.")
+                    cnn_pred(TEST_SET, test_mod_dir, k_top_labels)
 
 # if __name__ == '__main__':
 #     vocab_vector = [5000]

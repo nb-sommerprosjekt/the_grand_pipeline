@@ -33,12 +33,13 @@ def create_classifier(training_file,name,epoch,lr1,DIMENSIONS, up_rate,ws,loss1,
 
 #parameters
 
-def train_fasttext_models(train_file,test_file,save_location, epoch_vector,learning_rate_vector,learning_rate_update_vector,word_window_vector,loss_vector,wiki_vector,fasttext_k, minimum_articles,dewey_digits,save_model):
+def train_fasttext_models(train_file,test_file,save_location, epoch_vector,learning_rate_vector,learning_rate_update_vector,word_window_vector,loss_vector,wiki_vector,fasttext_k, minimum_articles,dewey_digits,save_model,top_k_labels):
     temp_file=open(os.path.join(save_location,"training_file.txt"),"w")
     temp_file.write(train_file)
     temp_file = open(os.path.join(save_location, "test_file.txt"), "w")
     temp_file.write(test_file)
 
+    top_k_labels=int(top_k_labels)
     if isinstance(epoch_vector,str):
         epoch_vector=[int(epoch_vector)]
     else:
@@ -64,6 +65,8 @@ def train_fasttext_models(train_file,test_file,save_location, epoch_vector,learn
     else:
         word_window_vector= list(map(int,  word_window_vector))
     WS=word_window_vector
+
+
 
 
 
@@ -124,5 +127,11 @@ def train_fasttext_models(train_file,test_file,save_location, epoch_vector,learn
                                     precision = result.precision
                                     recall = result.recall
                                     logfile.write("log k={}:::{}:::{}\n\n".format(k, precision, recall))
-                                logfile.write(evaluate_fasttext(os.path.join(save_location, "test_file.txt"), classifier))
+                                f1_score,answer_text=evaluate_fasttext(os.path.join(save_location, "test_file.txt"), classifier,top_k_labels)
+                                logfile.write(answer_text[0]+"\nF1_score:"+str(f1_score))
+
+
+
+def run_pred(test_file,classifier):
+    pass
 
