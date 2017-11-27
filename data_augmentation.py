@@ -118,59 +118,7 @@ def find_synonyms(word):
 
     #print(word + "---> " + str(synonym_collection))
     return synonyms
-# def replace_words_with_synonyms(tokenized_text,percentage):
-#     ''' Takes tokenized text as input, replaces words with synonyms or word2vec and outputs tokenized text as string with synonyms replaced'''
-#     num_words_to_replace = int(floor((percentage / 100) * len(tokenized_text)))
-#     print(len(tokenized_text))
-#     print("Ord som skal settes inn:" + str(num_words_to_replace))
-#     synonym_text = []
-#     print(synonym_text)
-#     print(len(synonym_text))
-#     start_sette_inn_ord_fra_synonymordbok = time.time()
-#
-#     words_replaced = 0
-#     synonyms_put_into_text = []
-#     #Replacing words with word from norsk synonymordbok
-#     for word in tokenized_text:
-#         synonym = find_synonyms(word.lower())
-#         if len(synonym) > 0 and words_replaced<(num_words_to_replace):
-#             #synonym_text.append("!!!støy-->"+word+"-->" + synonym[0]+"<--støy!!!")
-#             synonym_text.append(synonym[0])
-#             #synonyms_put_into_text.append("!!!støy-->"+word+"-->" + synonym[0]+"<--støy!!!")
-#             #synonyms_put_into_text.append(synonym[0])
-#             words_replaced += 1
-#             #print(words_replaced)
-#             #print("Synonymordbok:"+ word + "---> " + str(synonym[0]))
-#         else:
-#              synonym_text.append(word)
-#
-#     end_sette_inn_ord_fra_synonymordbok = time.time()
-#     synonymtid = end_sette_inn_ord_fra_synonymordbok -start_sette_inn_ord_fra_synonymordbok
-#     # Replacing remaining words with words from word2vec
-#     start_sette_inn_ord_fra_word2vec = time.time()
-#
-#
-#     if (words_replaced < num_words_to_replace):
-#         #words_left_to_replace = (num_words_to_replace-words_replaced)
-#         random_elements = random.sample(range(0,len(synonym_text)-1), len(synonym_text)-1)
-#         words_left_to_replace = (num_words_to_replace - words_replaced)
-#         #half_list = int(floor(len(random_elements))*)
-#
-#         for index in random_elements:
-#             if words_left_to_replace>0:
-#                 synonym_w2v = get_similar_words_from_word2vec(synonym_text[index], w2v_model)
-#                 if len(synonym_w2v)>0:
-#                     #temp_show = synonym_text[index]
-#                     #synonym_text[index] = "!!!støy--> "+temp_show+"-->"+synonym_w2v +"<--Støy!!!"
-#                     synonym_text[index] = synonym_w2v
-#                     words_replaced+=1
-#
-#     print("Words that have been replaced:" + str(words_replaced))
-#     end_sette_inn_ord_fra_word2vec = time.time()
-#     word2vec_tid = end_sette_inn_ord_fra_word2vec - start_sette_inn_ord_fra_word2vec
-#     #print("Tid for innsetting fra word2vec: " + str(word2vec_tid))
-#
-#     return synonym_text, word2vec_tid, synonymtid
+
 
 def replace_words_with_synonyms(tokenized_text,percentage):
     ''' Takes tokenized text as input, replaces words with synonyms or word2vec and outputs tokenized text as string with synonyms replaced'''
@@ -347,12 +295,12 @@ if "__main__":
            w2v_model = pickle.load(handle)
 #
 #
-#     create_fake_corpus('corpus_training_split','artifical_corpus_10_3',10,3, "uniform_noise")
-#     create_fake_corpus('corpus_training_split', 'artifical_corpus_10_5', 10, 5, "uniform_noise")
-#     create_fake_corpus('corpus_training_split', 'artifical_corpus_10_4', 10, 4, "uniform_noise")
-#     create_fake_corpus('corpus_training_split', 'artifical_corpus_10_6', 10, 6, "uniform_noise")
-#     create_fake_corpus('corpus_training_split', 'artifical_corpus_10_7', 10, 7, "uniform_noise")
-#     create_fake_corpus('corpus_training_split', 'artifical_corpus_10_5', 10, 8, "uniform_noise")
-#     create_fake_corpus('corpus_training_split', 'artifical_corpus_10_5', 10, 9, "uniform_noise")
+    #create_fake_corpus('corpus_training_split','artifical_corpus_10_3',10,3, "uniform_noise")
+    #create_fake_corpus('corpus_training_split', 'artifical_corpus_10_5', 10, 5, "uniform_noise")
+    #create_fake_corpus('corpus_training_split', 'artifical_corpus_10_4', 10, 4, "uniform_noise")
+    #create_fake_corpus('corpus_training_split', 'artifical_corpus_10_6', 10, 6, "uniform_noise")
+    #create_fake_corpus('corpus_training_split', 'artifical_corpus_10_7', 10, 7, "uniform_noise")
+    create_fake_corpus('corpus_training_split', 'artifical_corpus_10_8', 10, 8, "uniform_noise")
+    create_fake_corpus('corpus_training_split', 'artifical_corpus_10_9', 10, 9, "uniform_noise")
 
 
