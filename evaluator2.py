@@ -1,7 +1,7 @@
 import operator
 import numpy as np
 from sklearn.metrics import confusion_matrix
-
+from collections import Counter
 
 
 
@@ -110,7 +110,17 @@ def calculate_f1(correct_list,prediction_lists):
     return f1_score, total_text
 
 
+def majority_rule(predictions, k):
+    #returner liste med de k mest populære prediksjonen og sannsynligheten i tupler.
+    top_k_preds = [pred for pred in Counter(predictions).most_common(k)]
+    antall_preds = len(predictions)
+    topk_with_probabilities = []
+    for pred_tuple in top_k_preds:
+        probability = pred_tuple[1] / antall_preds
+        prob_tuple = (pred_tuple[0], probability)
+        topk_with_probabilities.append(prob_tuple)
 
+    return topk_with_probabilities
 
 
 
