@@ -124,11 +124,15 @@ def train_fasttext_models(train_file,test_file,save_location, epoch_vector,learn
                                     result = classifier.test(os.path.join(save_location, "test_file.txt"), k)
                                     print("Running took {} seconds.".format(time.time() - tid))
                                     tid = time.time()
+
                                     precision = result.precision
                                     recall = result.recall
+                                    print("Accuracy: {}".format(precision))
+                                    print("Recall: {}".format(recall))
                                     logfile.write("log k={}:::{}:::{}\n\n".format(k, precision, recall))
                                 f1_score,answer_text=evaluate_fasttext(os.path.join(save_location, "test_file.txt"), classifier,top_k_labels)
-                                logfile.write(answer_text[0]+"\nF1_score:"+str(f1_score))
+                                #for answer in answer_text:
+                                logfile.write(str(answer_text[0])+"\nF1_score:"+str(f1_score))
 
 
 

@@ -12,6 +12,9 @@ def evaluate_fasttext(test_file,classifier,top_k_labels):
         for line in f.readlines():
             texts.append(line)
             correct.append(line.split(" ")[0].replace("__label__",""))
+    #print(texts)
+    #print(top_k_labels)
+    #print(classifier)
     guesses = classifier.predict(texts, k=top_k_labels) #labels
     # guesses=[]
     # for label in labels:

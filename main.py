@@ -58,7 +58,7 @@ def preprocess(corpus_name,data_set,data_set_folder,stemming, stop_words,sentenc
         os.makedirs(corpus_name_folder)
     if not os.path.exists(corpus_name_location):
         os.makedirs(corpus_name_location)
-        print("Preprocessing the corpus from the folder 'tcg'.")
+        print("Preprocessing the corpus from the folder '{}'.".format(rootdir))
         for subdir, dirs, files in os.walk(rootdir):
             for file in files:
                 if str(file)[:5] == "meta-":
@@ -267,7 +267,7 @@ def split_articles(folder, article_length):
     return folder_split
 
 
-def remove_unecessary_articles(training_folder_split,corpus_folder,minimum_articles,dewey_digits):
+def remove_unecessary_articles(article_folder, corpus_folder, minimum_articles, dewey_digits):
     dewey_digits=int(dewey_digits)
     rubbish_folder=os.path.join(corpus_folder,"rubbish")
     if  os.path.exists(rubbish_folder):
@@ -281,9 +281,9 @@ def remove_unecessary_articles(training_folder_split,corpus_folder,minimum_artic
     dewey_dict = {}
 
 
-    for subdir, dirs, files in os.walk(training_folder_split):
+    for subdir, dirs, files in os.walk(article_folder):
         for file in files:
-            dewey, text = read_dewey_and_text(os.path.join(training_folder_split, file))
+            dewey, text = read_dewey_and_text(os.path.join(article_folder, file))
             if int(dewey_digits) > 0:
                 if len(dewey) > int(dewey_digits):
                     dewey = dewey[:dewey_digits]
@@ -293,26 +293,26 @@ def remove_unecessary_articles(training_folder_split,corpus_folder,minimum_artic
             else:
                 dewey_dict[dewey] = [file]
     valid_deweys=set()
-    training_set_length=0
+    set_length=0
     for key in dewey_dict.keys():
         if len(dewey_dict[key])<int(minimum_articles):
             for file in dewey_dict[key]:
-                os.rename(os.path.join(training_folder_split,file),os.path.join(rubbish_folder,file))
+                os.rename(os.path.join(article_folder, file), os.path.join(rubbish_folder, file))
         else:
             for file in dewey_dict[key]:
                 valid_deweys.add(key)
-                training_set_length+=1
-                dewey,text=read_dewey_and_text(os.path.join(training_folder_split, file))
+                set_length+=1
+                dewey,text=read_dewey_and_text(os.path.join(article_folder, file))
                 if len(dewey) > dewey_digits:
                     dewey = dewey[:dewey_digits]
-                with open(os.path.join(training_folder_split, file), "r+") as f3:
+                with open(os.path.join(article_folder, file), "r+") as f3:
                     f3.seek(0)
                     f3.write("__label__" + dewey + " " + str(text))
                     f3.truncate()
                     f3.close()
 
     print("Removed unnecessary dewey numbers. There are {} unique dewey numbers in the training set.".format(len(valid_deweys)))
-    return rubbish_folder,valid_deweys,training_set_length
+    return rubbish_folder,valid_deweys,set_length
 
 
 def prep_test_set(test_folder,valid_deweys,article_length,dewey_digits):
@@ -397,16 +397,16 @@ if __name__ == '__main__':
     #load_config_file
 
     training_folder=split_articles(training_folder,1000)
-    artificial_training_folder=training_folder+"artificial"
     if config["da_run"] == "True":
+        artificial_training_folder = training_folder + "artificial"
         if os.path.exists(artificial_training_folder):
             print("Artificial set already works. No action will be taken.")
         else:
             create_folder(artificial_training_folder)
             create_fake_corpus(training_folder, artificial_training_folder, config["da_splits"], config["da_noise_percentage"],config["da_noise_method"])
-            training_folder=artificial_training_folder
+        training_folder=artificial_training_folder
 
-    rubbish_folder,valid_deweys,training_set_length=remove_unecessary_articles(artificial_training_folder,corpus_folder,config["minimum_articles"],config["dewey_digits"])
+    rubbish_folder,valid_deweys,training_set_length=remove_unecessary_articles(training_folder,corpus_folder,config["minimum_articles"],config["dewey_digits"])
     #print(valid_deweys)
     test_folder_split,test_set_length=prep_test_set(test_folder,valid_deweys,config["article_size"],config["dewey_digits"])
 

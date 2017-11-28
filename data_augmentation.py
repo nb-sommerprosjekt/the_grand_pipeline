@@ -329,8 +329,8 @@ def create_fake_corpus(folder,artifical_folder, number_of_splits, noise_percenta
             noise_split_file = open(artifical_folder + '/' + text_name.replace('_split','') + '_' + str(noise_text_index)+".txt",'w')
             noise_split_file.write(noise_text_w_label)
             noise_split_file.close()
-
-        print("Tekst nr " + str(index+1) + "/" + str(total_number_of_texts)+ "er ferdig prosessert")
+        if (index+1%1000==0):
+            print("Tekst nr " + str(index+1) + "/" + str(total_number_of_texts)+ " er ferdig prosessert")
         #Copying original texts into folder with artificial ones.
     copy_tree(folder, artifical_folder)
 
