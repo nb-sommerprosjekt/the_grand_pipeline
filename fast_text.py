@@ -136,6 +136,6 @@ def train_fasttext_models(train_file,test_file,save_location, epoch_vector,learn
 
 
 
-def run_pred(test_file,classifier):
+def run_majority_rule(texts,classifier):
     pass
 

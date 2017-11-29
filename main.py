@@ -238,6 +238,8 @@ def split_text(text, number_of_words_per_output_article):
     split_texts = array_split(tokenized_text,split_count)
     return split_texts
 
+
+
 def split_articles(folder, article_length):
     article_length=int(article_length)
     folder_split=folder+"_split"
@@ -318,15 +320,15 @@ def remove_unecessary_articles(article_folder, corpus_folder, minimum_articles, 
 def prep_test_set(test_folder,valid_deweys,article_length,dewey_digits):
     print("Prepping test-folder.")
     dewey_digits=int(dewey_digits)
-    test_folder_split=split_articles(test_folder,article_length)
+    #test_folder=split_articles(test_folder,article_length)
 
     print("Test-folder split.")
-
+    test_files_split=[]
     test_set_length=0
-    for subdir, dirs, files in os.walk(test_folder_split):
+    for subdir, dirs, files in os.walk(test_folder):
         for file in files:
             #print(len(files))
-            with open(os.path.join(test_folder_split, file), "r+") as f:
+            with open(os.path.join(test_folder, file), "r+") as f:
                 text = f.read()
                 text=text.split(" ")
                 dewey = text[0].replace("__label__", "")
@@ -337,14 +339,15 @@ def prep_test_set(test_folder,valid_deweys,article_length,dewey_digits):
                     #print(dewey)
                 #print(dewey)
                 if dewey in valid_deweys:
+                    test_files_split.append([dewey,split_text(text,article_length)])
                     test_set_length+=1
                     #print("Not thrash")
                     f.seek(0)
                     f.write("__label__" + dewey + " " + str(text))
                     f.truncate()
                 else:
-                    os.rename(os.path.join(test_folder_split, file), os.path.join(rubbish_folder, file))
-    return test_folder_split,test_set_length
+                    os.rename(os.path.join(test_folder, file), os.path.join(rubbish_folder, file))
+    return test_folder,test_set_length,test_files_split
 
 
 
@@ -408,9 +411,9 @@ if __name__ == '__main__':
 
     rubbish_folder,valid_deweys,training_set_length=remove_unecessary_articles(training_folder,corpus_folder,config["minimum_articles"],config["dewey_digits"])
     #print(valid_deweys)
-    test_folder_split,test_set_length=prep_test_set(test_folder,valid_deweys,config["article_size"],config["dewey_digits"])
+    test_folder,test_set_length,dewey_and_texts=prep_test_set(test_folder,valid_deweys,config["article_size"],config["dewey_digits"])
 
-    test_text=load_set(test_folder_split)
+    test_text=load_set(test_folder)
     training_text=load_set(training_folder)
     test_file=save_file("tmp","test_file.txt",test_text)
     training_file=save_file("tmp","training_file.txt",training_text)

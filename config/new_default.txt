@@ -35,7 +35,7 @@ da_noise_method:::noise_on_parts
 
 #fast_text:
 ft_run:::True
-ft_epochs:::1
+ft_epochs:::75
 ft_lr:::0.3
 ft_lr_update:::98
 ft_loss:::hs

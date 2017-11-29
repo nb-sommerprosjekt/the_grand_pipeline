@@ -282,25 +282,25 @@ def create_fake_corpus(folder,artifical_folder, number_of_splits, noise_percenta
         #Copying original texts into folder with artificial ones.
     copy_tree(folder, artifical_folder)
 
-if "__main__":
-    # text_names, dewey_array, docs  = get_articles('corpus')
-    # vocab = make_vocab(docs)
-    # w2v_model_path = "w2v_tgc/full.bin"
-    # w2v_model = gensim.models.Word2Vec.load(w2v_model_path)
-    # make_most_similar_dictionary(vocab, w2v_model)
-
-
-    ###GLOBAL VARIABLES
-    with open('most_similar_dict.pickle', 'rb') as handle:
-           w2v_model = pickle.load(handle)
+# if "__main__":
+#     # text_names, dewey_array, docs  = get_articles('corpus')
+#     # vocab = make_vocab(docs)
+#     # w2v_model_path = "w2v_tgc/full.bin"
+#     # w2v_model = gensim.models.Word2Vec.load(w2v_model_path)
+#     # make_most_similar_dictionary(vocab, w2v_model)
 #
 #
-    #create_fake_corpus('corpus_training_split','artifical_corpus_10_3',10,3, "uniform_noise")
-    #create_fake_corpus('corpus_training_split', 'artifical_corpus_10_5', 10, 5, "uniform_noise")
-    #create_fake_corpus('corpus_training_split', 'artifical_corpus_10_4', 10, 4, "uniform_noise")
-    #create_fake_corpus('corpus_training_split', 'artifical_corpus_10_6', 10, 6, "uniform_noise")
-    #create_fake_corpus('corpus_training_split', 'artifical_corpus_10_7', 10, 7, "uniform_noise")
-    create_fake_corpus('corpus_training_split', 'artifical_corpus_10_8', 10, 8, "uniform_noise")
-    create_fake_corpus('corpus_training_split', 'artifical_corpus_10_9', 10, 9, "uniform_noise")
+#     ###GLOBAL VARIABLES
+#     with open('most_similar_dict.pickle', 'rb') as handle:
+#            w2v_model = pickle.load(handle)
+# #
+# #
+#     #create_fake_corpus('corpus_training_split','artifical_corpus_10_3',10,3, "uniform_noise")
+#     #create_fake_corpus('corpus_training_split', 'artifical_corpus_10_5', 10, 5, "uniform_noise")
+#     #create_fake_corpus('corpus_training_split', 'artifical_corpus_10_4', 10, 4, "uniform_noise")
+#     #create_fake_corpus('corpus_training_split', 'artifical_corpus_10_6', 10, 6, "uniform_noise")
+#     #create_fake_corpus('corpus_training_split', 'artifical_corpus_10_7', 10, 7, "uniform_noise")
+#     create_fake_corpus('corpus_training_split', 'artifical_corpus_10_8', 10, 8, "uniform_noise")
+#     create_fake_corpus('corpus_training_split', 'artifical_corpus_10_9', 10, 9, "uniform_noise")
 
 
