@@ -2,6 +2,7 @@ import operator
 import numpy as np
 from sklearn.metrics import confusion_matrix
 from collections import Counter
+import operator
 
 
 
@@ -111,17 +112,38 @@ def calculate_f1(correct_list,prediction_lists):
 
 
 def majority_rule(predictions, k):
-    #returner liste med de k mest populære prediksjonen og sannsynligheten i tupler.
-    top_k_preds = [pred for pred,word_count in Counter(predictions).most_common(k)]
-    # antall_preds = len(predictions)
-    # topk_with_probabilities = []
-    # for pred_tuple in top_k_preds:
-    #     probability = pred_tuple[1] / antall_preds
-    #     prob_tuple = (pred_tuple[0], probability)
-    #     topk_with_probabilities.append(prob_tuple)
+    #returner liste med de k mest populære prediksjonene.
+
+    prediction_lists2 = []
+    for i in range(len(predictions[0])):
+        prediction_lists2.append([])
+    for prediction_list in predictions:
+        for j in range(len(prediction_list[0])):
+            prediction_lists2[j].append(prediction_list[j])
+    prediction_lists=prediction_lists2
+    print(prediction_lists)
+    weights = [1/n for n in range(1,k+2)]
+
+    pred_dict = dict()
+    for n in range(0, len(prediction_lists)):
+        top_k_preds = [pred for pred in Counter(prediction_lists[n]).most_common()]
+        for prediction in top_k_preds:
+            freq = prediction[1]
+            dewey = prediction[0]
+            if not dewey in pred_dict :
+                pred_dict[dewey] = freq*weights[n]
+            else:
+                pred_dict[dewey]+=freq*weights[n]
+    sorted_tuples = sorted(pred_dict.items(), key=operator.itemgetter(1), reverse=True)
+    top_k_preds = []
+    for i in range(0,k):
+        top_k_preds.append(sorted_tuples[i][0])
 
     return top_k_preds
 
 
+if __name__ == '__main__':
+    preds = [["123", "321", "777"],["123", "323", "777"],["999","888","777"]]
 
+    majority_rule(preds,5)
 
