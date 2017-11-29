@@ -142,8 +142,4 @@ def majority_rule(predictions, k):
     return top_k_preds
 
 
-if __name__ == '__main__':
-    preds = [["123", "321", "777"],["123", "323", "777"],["999","888","777"]]
-
-    majority_rule(preds,5)
 
