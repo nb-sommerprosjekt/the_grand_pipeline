@@ -2,6 +2,7 @@ import operator
 import numpy as np
 from sklearn.metrics import confusion_matrix
 from collections import Counter
+import operator
 
 
 
@@ -145,12 +146,12 @@ def majority_rule(predictions, k):
 
     pred_dict = dict()
     #print(weights)
+
     for n in range(0, len(prediction_lists)):
         top_k_preds = [pred for pred in Counter(prediction_lists[n]).most_common()]
         for prediction in top_k_preds:
             freq = prediction[1]
             dewey = prediction[0]
-            #print(weights[n])
             if not dewey in pred_dict :
                 pred_dict[dewey] = freq*weights[n]
             else:
@@ -159,9 +160,7 @@ def majority_rule(predictions, k):
     top_k_preds = []
     for i in range(0,k):
         top_k_preds.append(sorted_tuples[i][0])
-
-    return list(top_k_preds)
-
+    return top_k_preds
 
 
 
