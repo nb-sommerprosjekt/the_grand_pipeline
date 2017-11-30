@@ -12,7 +12,7 @@ import datetime
 import pickle
 import re
 import evaluator2
-
+from sklearn.metrics import accuracy_score
 def get_articles(original_name):
     # Tar inn en textfil som er labelet på fasttext-format. Gir ut to arrays. Et med deweys og et med tekstene. [deweys],[texts]
     articles=open(original_name,"r")
@@ -155,30 +155,27 @@ def test_mlp(TEST_SET, MODEL_DIRECTORY, k_output_labels, isMajority_rule=True):
         vectorization_type = re_vectorization_type.group(1)
         print("This utilizes the vectorization: {}".format(str(vectorization_type)))
 
-    dewey_test, text_test = get_articles(TEST_SET)
+    #dewey_test, text_test = get_articles(TEST_SET)
 
     if isMajority_rule == True:
         #test_set_dewey = [[["616"], [text_test[0],text_test[1],text_test[3]]], [["362"], [text_test[4],text_test[5],text_test[6]]],
         #                  [["616"], [text_test[7],text_test[8],text_test[9]]]]
-        test_score,test_accuracy, predictions = mlp_majority_rule_test(test_set_dewey=TEST_SET,MODEL=model,
+        predictions, test_accuracy= mlp_majority_rule_test(test_set_dewey=TEST_SET,MODEL=model,
                                                                        MAX_SEQUENCE_LENGTH=MAX_SEQUENCE_LENGTH,
                                                                        VOCAB_SIZE=vocab_size,TRAIN_TOKENIZER = tokenizer,
                                                                        LABEL_INDEX_VECTOR = labels_index,
-                                                                       VECTORIZATION_TYPE=vectorization_type,
-                                                                       k_output_labels= k_output_labels)
+                                                                       VECTORIZATION_TYPE=vectorization_type,k_output_labels= k_output_labels)
 
     else:
         x_test, y_test = fasttextTest2mlp(TEST_SET, MAX_SEQUENCE_LENGTH, vocab_size, tokenizer, labels_index, VECTORIZATION_TYPE= vectorization_type)
-        test_score,test_accuracy = evaluation(model,x_test,y_test, VERBOSE = 1)
+        #test_score,test_accuracy = evaluation(model,x_test,y_test, VERBOSE = 1)
         predictions = prediction(model, x_test, k_output_labels, labels_index)
 
         #print('Test_score:', test_score)
         #print('Test Accuracy', test_accuracy)
     # Writing results to txt-file.
     with open(os.path.join(MODEL_DIRECTORY,"result.txt"),'a') as result_file:
-        result_file.write('test_set:'+TEST_SET+'\n'+
-                          'Test_score:'+ str(test_score)+ '\n'
-                          'Test_accuracy:' + str(test_accuracy)+'\n\n')
+        result_file.write('Test_accuracy:' + str(test_accuracy)+'\n\n')
     return predictions
 
 
@@ -237,33 +234,47 @@ def fasttextTest2mlp(FASTTEXT_TEST_FILE,MAX_SEQUENCE_LENGTH, VOCAB_SIZE, TRAIN_T
 def mlp_majority_rule_test(test_set_dewey,MODEL,MAX_SEQUENCE_LENGTH, VOCAB_SIZE, TRAIN_TOKENIZER, LABEL_INDEX_VECTOR
                            , VECTORIZATION_TYPE, k_output_labels):
     total_preds =[]
+    y_test_total = []
+    one_pred = []
     for i in range(len(test_set_dewey)):
-        split_preds = []
-        dewey =test_set_dewey[i][0][0]
-        texts = test_set_dewey[i][1]
-        print(texts)
-        print(len(texts))
-        #print(dewey)
-        dewey_label_index= LABEL_INDEX_VECTOR[dewey.strip()]
-        #print(texts)
-        y_test = []
-        for i in range(0, len(texts)):
-            y_test.append(dewey_label_index)
-        test_sequences = TRAIN_TOKENIZER.texts_to_sequences(texts)
-        test_sequences_matrix = TRAIN_TOKENIZER.sequences_to_matrix(test_sequences, mode=VECTORIZATION_TYPE)
 
-        x_test = pad_sequences(test_sequences_matrix, maxlen=MAX_SEQUENCE_LENGTH)
-        y_test = to_categorical(np.asarray(y_test))
+            split_preds = []
+            dewey =test_set_dewey[i][0]
+            #print(dewey)
+            texts = test_set_dewey[i][1]#[1]
+            #print(texts)
+            #break
+           # print(len(texts))
+            #print(dewey)
+            dewey_label_index= LABEL_INDEX_VECTOR[dewey.strip()]
+            #print(texts)
+            y_test = []
+            new_texts =[]
+            for j in range(0, len(texts)):
+                y_test.append(dewey_label_index)
+                new_texts.append(' '.join(texts[j]))
+            #print(new_texts)
+            test_sequences = TRAIN_TOKENIZER.texts_to_sequences(new_texts)
+            test_sequences_matrix = TRAIN_TOKENIZER.sequences_to_matrix(test_sequences, mode=VECTORIZATION_TYPE)
+            x_test = pad_sequences(test_sequences_matrix, maxlen=MAX_SEQUENCE_LENGTH)
+            y_test = to_categorical(np.asarray(y_test))
 
-        #test_score, test_accuracy = evaluation(MODEL, x_test, y_test, VERBOSE=1)
-        predictions = prediction(MODEL, x_test, k_output_labels, LABEL_INDEX_VECTOR)
-        print(predictions)
-        majority_rule_preds = evaluator2.majority_rule(predictions,3)
-        #print(new_preds)
-        print(majority_rule_preds)
-        total_preds.append(majority_rule_preds)
-    print(total_preds)
-    return total_preds
+
+            predictions = prediction(MODEL, x_test, k_output_labels, LABEL_INDEX_VECTOR)
+            # print(predictions)
+            y_test_total.append(dewey)
+            majority_rule_preds = evaluator2.majority_rule(predictions,3)
+            # print(new_preds)
+           # print(majority_rule_preds)
+            total_preds.append(majority_rule_preds)
+            one_pred.append(majority_rule_preds[0])
+        # print(total_preds)
+    #print(total_preds)
+    #print(y_test_total)
+    #print(one_pred)
+    accuracy = accuracy_score(y_test_total, one_pred)
+    #print(accuracy)
+    return total_preds, accuracy
 
 def prediction(MODEL,X_TEST,k_preds, label_indexes):
     predictions = MODEL.predict(x=X_TEST)
@@ -328,7 +339,7 @@ def log_model_stats(model_directory, training_set_name, training_set,
 
 
 def run_mlp_tests (training_set, test_set, save_model_folder,
-                   batch_size,vocab_size_vector, sequence_length_vector, epoch_vector, loss_model, vectorization_type, validation_split, k_output_labels):
+                   batch_size,vocab_size_vector, sequence_length_vector, epoch_vector, loss_model, vectorization_type, validation_split, k_output_labels, isMajority_rule=True):
 
     if isinstance(vocab_size_vector,str):
         vocab_size_vector=[int(vocab_size_vector)]
@@ -367,19 +378,10 @@ def run_mlp_tests (training_set, test_set, save_model_folder,
 
                 print("Setter igang test")
                 try:
-                     test_mlp(test_set,MOD_DIR, k_output_labels)
+                     test_mlp(test_set,MOD_DIR, k_output_labels, isMajority_rule)
                 except ValueError:
 
                       print("Noe gikk feil med testen, prøver på nytt")
-                      test_mlp(test_set, MOD_DIR, k_output_labels= k_output_labels, isMajority_rule= True)
+                      test_mlp(test_set, MOD_DIR,  k_output_labels, isMajority_rule)
 
-
-#if __name__ == '__main__':
-   #test= [[["616"],['a', 'b', 'c']], [["362"],['d', 'e', 'f']], [["616"],['g', 'h', 'i']]]
-   #mlp_majority_rule_test(test)
-#     run_mlp_tests(training_set="corpus_w_wiki/data_set_100/combined100_training", test_set="corpus_w_wiki/data_set_100/100_test",save_model_folder= "mlp/"
-#                   ,batch_size=64, vocab_size_vector=[5000], sequence_length_vector = [600]
-#                   ,epoch_vector = [50], loss_model = "categorical_crossentropy", vectorization_type = 'binary',validation_split= 0.20, k_output_labels = 3)
-#
-   #test_mlp(TEST_SET="corpus_w_wiki/data_set_100/100_test.txt",MODEL_DIRECTORY="mlp/mlp-5000-5000-10-201711091138", k_output_labels= 3, isMajority_rule=True)
 
