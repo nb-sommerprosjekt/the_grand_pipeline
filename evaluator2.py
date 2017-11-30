@@ -8,30 +8,30 @@ from collections import Counter
 
 
 def evaluate_predictions(correct_list, prediction_list):
-    c = confusion_matrix(correct_list, prediction_list)
-    true_positives_vector = np.diag(c)
-    precision_vector = true_positives_vector / np.sum(c, axis=0, dtype=np.float)
-    recall_vector = np.diag(c) / np.sum(c, axis=1, dtype=np.float)
-    # print(precision_vector)
-    # print(recall_vector)
-
-    true_positives_vector = []
-    false_positives_vector = []
-    false_negatives_vector = []
-    true_negatives_vector = []
-    for i in range(0, len(c)):
-        TP_of_class_i = c[i, i]
-        FP_of_class_i = np.sum(c, axis=0)[i] - c[i, i]  # The corresponding column for class_i - TP
-        FN_of_class_i = np.sum(c, axis=1)[i] - c[i, i]  # The corresponding row for class_i - TP
-        TN_of_class_i = np.sum(c) - TP_of_class_i - FP_of_class_i - FN_of_class_i
-        true_positives_vector.append(TP_of_class_i)
-        false_positives_vector.append(FP_of_class_i)
-        false_negatives_vector.append(FN_of_class_i)
-        true_negatives_vector.append(TN_of_class_i)
-    # print (true_positives_vector)
-    # print(false_negatives_vector)
-    # print(false_positives_vector)
-    # print(true_negatives_vector)
+    # c = confusion_matrix(correct_list, prediction_list)
+    # true_positives_vector = np.diag(c)
+    # precision_vector = true_positives_vector / np.sum(c, axis=0, dtype=np.float)
+    # recall_vector = np.diag(c) / np.sum(c, axis=1, dtype=np.float)
+    # # print(precision_vector)
+    # # print(recall_vector)
+    #
+    # true_positives_vector = []
+    # false_positives_vector = []
+    # false_negatives_vector = []
+    # true_negatives_vector = []
+    # for i in range(0, len(c)):
+    #     TP_of_class_i = c[i, i]
+    #     FP_of_class_i = np.sum(c, axis=0)[i] - c[i, i]  # The corresponding column for class_i - TP
+    #     FN_of_class_i = np.sum(c, axis=1)[i] - c[i, i]  # The corresponding row for class_i - TP
+    #     TN_of_class_i = np.sum(c) - TP_of_class_i - FP_of_class_i - FN_of_class_i
+    #     true_positives_vector.append(TP_of_class_i)
+    #     false_positives_vector.append(FP_of_class_i)
+    #     false_negatives_vector.append(FN_of_class_i)
+    #     true_negatives_vector.append(TN_of_class_i)
+    # # print (true_positives_vector)
+    # # print(false_negatives_vector)
+    # # print(false_positives_vector)
+    # # print(true_negatives_vector)
 
     #print(prediction_list)
     correct_guesses={}
@@ -88,10 +88,12 @@ def evaluate_predictions(correct_list, prediction_list):
 def calculate_f1(correct_list,prediction_lists):
     prediction_lists2=[]
     for i in range(len(prediction_lists[0])):
+
         prediction_lists2.append([])
     for prediction_list in prediction_lists:
-        for k in range(len(prediction_list[0])):
+        for k in range(len(prediction_list)):
             prediction_lists2[k].append(prediction_list[k])
+            #print(prediction_list[k],k)
     prediction_lists=prediction_lists2
 
     total_correct=0
@@ -104,23 +106,61 @@ def calculate_f1(correct_list,prediction_lists):
         total_text.append(tmp)
         total_correct+=correct
 
+
     recall=total_correct/float(total)
     print("Recall: {}, Accuracy: {}".format(recall,accuracy))
     f1_score= 2*(accuracy*recall)/float(accuracy+recall)
     return f1_score, total_text
 
+def evaluate_fasttext(test_file,classifier,top_k_labels):
+    return_text=""
+    texts=[]
+    correct=[]
+    #test_file_name="corpus_test2-2.txt"
+    with open(test_file, "r")as f:
+        for line in f.readlines():
+            texts.append(line)
+            correct.append(line.split(" ")[0].replace("__label__",""))
+    #print(texts)
+    #print(top_k_labels)
+    #print(classifier)
+    guesses = classifier.predict(texts, k=top_k_labels) #labels
+    # guesses=[]
+    # for label in labels:
+    #
+    #     guesses.append(label[0][0])
+    return calculate_f1(correct,guesses)
+
 
 def majority_rule(predictions, k):
-    #returner liste med de k mest populære prediksjonen og sannsynligheten i tupler.
-    top_k_preds = [pred for pred,word_count in Counter(predictions).most_common(k)]
-    # antall_preds = len(predictions)
-    # topk_with_probabilities = []
-    # for pred_tuple in top_k_preds:
-    #     probability = pred_tuple[1] / antall_preds
-    #     prob_tuple = (pred_tuple[0], probability)
-    #     topk_with_probabilities.append(prob_tuple)
+    prediction_lists2 = []
+    for i in range(k):
+        prediction_lists2.append([])
+    for prediction_list in predictions:
+        for j in range(len(prediction_list)):
+            prediction_lists2[j].append(prediction_list[j])
+    prediction_lists=prediction_lists2
+    #print(prediction_lists)
+    weights = [1/n for n in range(1,k+2)]
 
-    return top_k_preds
+    pred_dict = dict()
+    #print(weights)
+    for n in range(0, len(prediction_lists)):
+        top_k_preds = [pred for pred in Counter(prediction_lists[n]).most_common()]
+        for prediction in top_k_preds:
+            freq = prediction[1]
+            dewey = prediction[0]
+            #print(weights[n])
+            if not dewey in pred_dict :
+                pred_dict[dewey] = freq*weights[n]
+            else:
+                pred_dict[dewey]+=freq*weights[n]
+    sorted_tuples = sorted(pred_dict.items(), key=operator.itemgetter(1), reverse=True)
+    top_k_preds = []
+    for i in range(0,k):
+        top_k_preds.append(sorted_tuples[i][0])
+
+    return list(top_k_preds)
 
 
 

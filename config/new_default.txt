@@ -24,19 +24,18 @@ minimum_articles:::300
 dewey_digits:::3
 
 #data_augmentation
-da_run:::True
+da_run:::False
 da_splits:::5
 da_noise_percentage:::10
 da_noise_method:::noise_on_parts
-
 
 #model_parameters:
 
 
 #fast_text:
 ft_run:::True
-ft_epochs:::75
-ft_lr:::0.3
+ft_epochs:::1,2
+ft_lr:::0.3	
 ft_lr_update:::98
 ft_loss:::hs
 ft_wiki_vec:::True
