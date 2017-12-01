@@ -48,16 +48,16 @@ def read_dewey_and_text(location):
     return dewey,text
 
 
-def preprocess(corpus_name,data_set,data_set_folder,stemming, stop_words,sentences,lower_case,extra_functions):
+def preprocess(corpus_name, data_set, data_set_folder, stemming, stop_words, sentences, lower_case, extra_functions):
     counter=0
     rootdir=data_set
-    corpus_name_folder=os.path.join(data_set_folder,corpus_name+"_folder")
-    corpus_name_location=os.path.join(corpus_name_folder,corpus_name)
+    corpus_name_folder=os.path.join(data_set_folder, corpus_name)
+    corpus_location=os.path.join(corpus_name_folder, corpus_name)
 
     if not os.path.exists(corpus_name_folder):
         os.makedirs(corpus_name_folder)
-    if not os.path.exists(corpus_name_location):
-        os.makedirs(corpus_name_location)
+    if not os.path.exists(corpus_location):
+        os.makedirs(corpus_location)
         print("Preprocessing the corpus from the folder '{}'.".format(rootdir))
         for subdir, dirs, files in os.walk(rootdir):
             for file in files:
@@ -88,15 +88,15 @@ def preprocess(corpus_name,data_set,data_set_folder,stemming, stop_words,sentenc
                         # FUNCTION_CALL()
                         # FUNCTION_CALL()
                         pass
-                    file=open(os.path.join(corpus_name_location, file[5:]),"w")
+                    file=open(os.path.join(corpus_location, file[5:]),"w")
                     file.write("__label__"+dewey+" "+text)
-        print("Preprocessed corpus saved in the folder {}".format(corpus_name_location))
+        print("Preprocessed corpus saved in the folder {}".format(corpus_location))
         return corpus_name_folder  #Kanskje kjøre neste steg.
 
 
 
     else:
-        print("Corpus is already created, using {} ".format(corpus_name_location))
+        print("Corpus is already created, using {} ".format(corpus_location))
         return corpus_name_folder #Kanskje kjøre neste steg.
 
 def preprocess_wiki(corpus_folder,wiki_corpus_name,stemming, stop_words, sentences,lower_case, extra_functions):
@@ -236,7 +236,12 @@ def split_text(text, number_of_words_per_output_article):
     tokenized_text = word_tokenize(text, language="norwegian")
     split_count = max(1, floor(len(tokenized_text)/int(number_of_words_per_output_article)))
     split_texts = array_split(tokenized_text,split_count)
-    return split_texts
+    texts=[]
+    for t in split_texts:
+        t=list(t)
+        t=" ".join(t)
+        texts.append(t)
+    return texts
 
 
 
@@ -339,7 +344,7 @@ def prep_test_set(test_folder,valid_deweys,article_length,dewey_digits):
                     #print(dewey)
                 #print(dewey)
                 if dewey in valid_deweys:
-                    test_files_split.append([dewey,split_text(text,article_length)])
+                    test_files_split.append([dewey,list(split_text(text,article_length))])
                     test_set_length+=1
                     #print("Not thrash")
                     f.seek(0)
@@ -434,7 +439,7 @@ if __name__ == '__main__':
 
 
     if config["ft_run"]=="True":
-        train_fasttext_models(training_text,test_text,os.path.join("fasttext",config["ft_run_name"]),config["ft_epochs"],config["ft_lr"],config["ft_lr_update"],config["ft_word_window"],config["ft_loss"],config["ft_wiki_vec"],config["ft_k_labels"],config["minimum_articles"],config["dewey_digits"],config["ft_save_model"],config["ft_top_k_labels"])
+        train_fasttext_models(training_text,test_text,os.path.join("fasttext",config["ft_run_name"]),config["ft_epochs"],config["ft_lr"],config["ft_lr_update"],config["ft_word_window"],config["ft_loss"],config["ft_wiki_vec"],config["ft_k_labels"],config["minimum_articles"],config["dewey_digits"],config["ft_save_model"],config["ft_top_k_labels"],dewey_and_texts)
     if config["mlp_run"]=="True":
         run_mlp_tests(training_file,test_file,config["mlp_save_model_folder"],config["mlp_batch_size"],config["mlp_vocab_size_vector"],config["mlp_sequence_length_vector"],config["mlp_epoch_vector"],config["mlp_loss_model"],config["mlp_vectorization_type"],config["mlp_validation_split"],config["mlp_k_labels"])
     if config["cnn_run"] == "True":

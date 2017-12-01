@@ -2,7 +2,9 @@ import fasttext
 import time
 import os
 from datetime import datetime
-from evaluator import evaluate_fasttext
+from evaluator2 import evaluate_fasttext
+from evaluator2 import majority_rule
+from evaluator2 import calculate_f1
 
 def create_classifier(training_file,name,epoch,lr1,DIMENSIONS, up_rate,ws,loss1,wiki,save_location):
     #print(epoch,lr1,DIMENSIONS,ws,up_rate,loss1,wiki)
@@ -33,7 +35,7 @@ def create_classifier(training_file,name,epoch,lr1,DIMENSIONS, up_rate,ws,loss1,
 
 #parameters
 
-def train_fasttext_models(train_file,test_file,save_location, epoch_vector,learning_rate_vector,learning_rate_update_vector,word_window_vector,loss_vector,wiki_vector,fasttext_k, minimum_articles,dewey_digits,save_model,top_k_labels):
+def train_fasttext_models(train_file,test_file,save_location, epoch_vector,learning_rate_vector,learning_rate_update_vector,word_window_vector,loss_vector,wiki_vector,fasttext_k, minimum_articles,dewey_digits,save_model,top_k_labels,dewey_and_texts):
     temp_file=open(os.path.join(save_location,"training_file.txt"),"w")
     temp_file.write(train_file)
     temp_file = open(os.path.join(save_location, "test_file.txt"), "w")
@@ -84,6 +86,8 @@ def train_fasttext_models(train_file,test_file,save_location, epoch_vector,learn
         fasttext_k= list(map(int, fasttext_k))
     Ks=fasttext_k
 
+    f1_and_parameters={}
+
     DIMENSIONS = 300
     tid = time.time()
     total_iterations = len(EPOCHs) * len(LRs) * len(UP_RATEs) * len(WS) * len(LOSS) * len(WIKI_VEC)
@@ -130,12 +134,33 @@ def train_fasttext_models(train_file,test_file,save_location, epoch_vector,learn
                                     print("Accuracy: {}".format(precision))
                                     print("Recall: {}".format(recall))
                                     logfile.write("log k={}:::{}:::{}\n\n".format(k, precision, recall))
+                                temp_f1,temp_answettext=run_majority_rule(dewey_and_texts,classifier,top_k_labels)
+
+                                for a in temp_answettext:
+                                    print(a,"F1 score: ",temp_f1)
                                 f1_score,answer_text=evaluate_fasttext(os.path.join(save_location, "test_file.txt"), classifier,top_k_labels)
-                                #for answer in answer_text:
-                                logfile.write(str(answer_text[0])+"\nF1_score:"+str(f1_score))
+                                f1_and_parameters[f1_score]="Epoch: {} , lr: {} , update_rate: {} , window_size: {}, loss: {} , wiki: {}".format(str(epoch),str(lr).replace(".",""),str(up_rate),str(ws),loss,str(wiki_vec))
+                                for answer in answer_text:
+                                    logfile.write(str(answer)+"\nF1_score:"+str(f1_score)+"\n\n")
+    f1_scores= list(f1_and_parameters.keys())
+    f1_scores.sort()
+    for f1 in f1_scores:
+        print(str(f1)+ ": "+str(f1_and_parameters[f1]))
 
 
 
-def run_majority_rule(texts,classifier):
-    pass
+def run_majority_rule(text_set,classifier,top_k_labels):
+    prediction_list=[]
+    correct_list=[]
+    for element in text_set:
+        dewey=element[0]
+        texts=element[1]
+
+
+        predictions = classifier.predict(texts, k=top_k_labels)  # labels
+        majority_predictions=majority_rule(predictions,top_k_labels)
+        prediction_list.append(majority_predictions)
+        correct_list.append(dewey)
+    return calculate_f1(correct_list,prediction_list)
+
 
