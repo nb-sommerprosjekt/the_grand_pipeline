@@ -238,22 +238,18 @@ def mlp_majority_rule_test(test_set_dewey,MODEL,MAX_SEQUENCE_LENGTH, VOCAB_SIZE,
     one_pred = []
     for i in range(len(test_set_dewey)):
 
-            split_preds = []
+
             dewey =test_set_dewey[i][0]
-            #print(dewey)
-            texts = test_set_dewey[i][1]#[1]
-            #print(texts)
-            #break
-           # print(len(texts))
-            #print(dewey)
+
+            texts = test_set_dewey[i][1]
             dewey_label_index= LABEL_INDEX_VECTOR[dewey.strip()]
-            #print(texts)
             y_test = []
             new_texts =[]
+
             for j in range(0, len(texts)):
                 y_test.append(dewey_label_index)
                 new_texts.append(' '.join(texts[j]))
-            #print(new_texts)
+
             test_sequences = TRAIN_TOKENIZER.texts_to_sequences(new_texts)
             test_sequences_matrix = TRAIN_TOKENIZER.sequences_to_matrix(test_sequences, mode=VECTORIZATION_TYPE)
             x_test = pad_sequences(test_sequences_matrix, maxlen=MAX_SEQUENCE_LENGTH)
@@ -261,19 +257,12 @@ def mlp_majority_rule_test(test_set_dewey,MODEL,MAX_SEQUENCE_LENGTH, VOCAB_SIZE,
 
 
             predictions = prediction(MODEL, x_test, k_output_labels, LABEL_INDEX_VECTOR)
-            # print(predictions)
             y_test_total.append(dewey)
             majority_rule_preds = evaluator2.majority_rule(predictions,3)
-            # print(new_preds)
-           # print(majority_rule_preds)
             total_preds.append(majority_rule_preds)
             one_pred.append(majority_rule_preds[0])
-        # print(total_preds)
-    #print(total_preds)
-    #print(y_test_total)
-    #print(one_pred)
+
     accuracy = accuracy_score(y_test_total, one_pred)
-    #print(accuracy)
     return total_preds, accuracy
 
 def prediction(MODEL,X_TEST,k_preds, label_indexes):
