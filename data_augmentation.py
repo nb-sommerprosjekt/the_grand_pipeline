@@ -12,6 +12,12 @@ import os
 import pickle
 from distutils.dir_util import copy_tree
 
+
+###GLOBAL VARIABLES
+with open('most_similar_dict.pickle', 'rb') as handle:
+         w2v_model = pickle.load(handle)
+
+
 def fix_corpus(folder, name_of_new_folder):
 
     if not os.path.exists(name_of_new_folder):
