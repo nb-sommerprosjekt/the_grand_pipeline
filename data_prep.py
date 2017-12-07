@@ -10,6 +10,7 @@ from nltk.stem import snowball
 from nltk.tokenize import word_tokenize
 from numpy import array_split
 from fast_text import train_fasttext_models
+import os
 
 def load_config(config_file):
     print("Loading config file: {}".format(config_file))
