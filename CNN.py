@@ -218,7 +218,7 @@ def cnn_majority_rule_test(test_set_dewey,MODEL,MAX_SEQUENCE_LENGTH, TRAIN_TOKEN
             y_test = to_categorical(np.asarray(y_test))
 
 
-            predictions = MLP.prediction(MODEL, x_test, k_output_labels, LABEL_INDEX_VECTOR)
+            predictions = utils.prediction(MODEL, x_test, k_output_labels, LABEL_INDEX_VECTOR)
             y_test_total.append(dewey)
             majority_rule_preds = evaluator2.majority_rule(predictions,k_output_labels)
             total_preds.append(majority_rule_preds)
