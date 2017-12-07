@@ -7,13 +7,9 @@ from data_augmentation import create_fake_corpus
 import nltk
 
 
-
-
 if __name__ == '__main__':
     nltk.download('omw')
 
-    # fix_corpus("corpus","corpus2")
-    # exit(0)
     print("Trying to load config-file named: {}".format(sys.argv[1]))
     config=data_prep.load_config(sys.argv[1])
 
@@ -67,6 +63,6 @@ if __name__ == '__main__':
     #if config["ft_run"]=="True":
     #    train_fasttext_models(training_text,test_text,os.path.join("fasttext",config["ft_run_name"]),config["ft_epochs"],config["ft_lr"],config["ft_lr_update"],config["ft_word_window"],config["ft_loss"],config["ft_wiki_vec"],config["ft_k_labels"],config["minimum_articles"],config["dewey_digits"],config["ft_save_model"],config["ft_top_k_labels"],dewey_and_texts)
     if config["mlp_run"]=="True":
-        run_mlp_tests(training_file,test_file,config["mlp_save_model_folder"],config["mlp_batch_size"],config["mlp_vocab_size_vector"],config["mlp_sequence_length_vector"],config["mlp_epoch_vector"],config["mlp_loss_model"],config["mlp_vectorization_type"],config["mlp_validation_split"],config["mlp_k_labels"])
+        run_mlp_tests(training_file,dewey_and_texts,config["mlp_save_model_folder"],config["mlp_batch_size"],config["mlp_vocab_size_vector"],config["mlp_sequence_length_vector"],config["mlp_epoch_vector"],config["mlp_loss_model"],config["mlp_vectorization_type"],config["mlp_validation_split"],config["mlp_k_labels"])
     if config["cnn_run"] == "True":
         run_cnn_tests(training_file,dewey_and_texts,config["cnn_vocab_size_vector"],config["cnn_sequence_length_vector"],config["cnn_epoch_vector"],config["cnn_save_model_folder"],config["cnn_loss_model"],config["cnn_validation_split"],config["cnn_w2v"],config["cnn_k_labels"])
