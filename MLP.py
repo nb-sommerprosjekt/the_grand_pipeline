@@ -12,44 +12,8 @@ import datetime
 import pickle
 import re
 import evaluator2
+import utils
 from sklearn.metrics import accuracy_score
-def get_articles(original_name):
-    # Tar inn en textfil som er labelet på fasttext-format. Gir ut to arrays. Et med deweys og et med tekstene. [deweys],[texts]
-    articles=open(original_name,"r")
-    articles=articles.readlines()
-    dewey_array = []
-    docs = []
-    dewey_dict = {}
-    for article in articles:
-        dewey=article.partition(' ')[0].replace("__label__","")
-        article_label_removed = article.replace("__label__"+dewey,"")
-        docs.append(article_label_removed)
-        dewey_array.append(dewey)
-
-    return dewey_array, docs
-
-def get_articles_from_folder(folder):
-    ''' Tar inn en textfil som er labelet på fasttext-format. Gir ut 3 arrays. Et med navn på tekstfilene,
-    et med deweys og et med tekstene. [tekst_navn][deweys],[texts]'''
-    arr = os.listdir(folder)
-    arr_txt = [path for path in os.listdir(folder) if path.endswith(".txt")]
-
-
-    dewey_array = []
-    docs = []
-    for article_path in arr_txt:
-            article = open(os.path.join(folder,article_path), "r")
-            article = article.readlines()
-            for article_content in article:
-                dewey=article_content.partition(' ')[0].replace("__label__","")
-                text  = article_content.replace("__label__"+dewey,"")
-                docs.append(text)
-                dewey_array.append(dewey[:3])
-    text_names = [path.replace('.txt','') for path in arr_txt ]
-    #print(len(dewey_array))
-    #print(text_names)
-    return text_names, dewey_array, docs
-
 
 
 def train_mlp(TRAINING_SET, BATCH_SIZE, VOCAB_SIZE, MAX_SEQUENCE_LENGTH,EPOCHS, FOLDER_TO_SAVE_MODEL, LOSS_MODEL, VECTORIZATION_TYPE, VALIDATION_SPLIT):
@@ -64,15 +28,16 @@ def train_mlp(TRAINING_SET, BATCH_SIZE, VOCAB_SIZE, MAX_SEQUENCE_LENGTH,EPOCHS, 
     BATCH_SIZE=int(BATCH_SIZE)
     VOCAB_SIZE=int(VOCAB_SIZE)
 
-    x_train, y_train, tokenizer, num_classes, labels_index = fasttextTrain2mlp(TRAINING_SET, MAX_SEQUENCE_LENGTH, vocab_size,VECTORIZATION_TYPE, folder = False)
+    x_train, y_train, tokenizer, num_classes, labels_index = fasttextTrain2mlp(TRAINING_SET, MAX_SEQUENCE_LENGTH, vocab_size
+                                                                               ,VECTORIZATION_TYPE, folder = False)
 
     ####Preparing test_set
 
     model = Sequential()
-    model.add(Dense(128, input_shape=(MAX_SEQUENCE_LENGTH,)))
+    model.add(Dense(512, input_shape=(MAX_SEQUENCE_LENGTH,)))
     model.add(Activation('relu'))
     model.add(Dropout(0.2))
-    model.add(Dense(128, input_shape=(vocab_size,)))
+    model.add(Dense(512, input_shape=(vocab_size,)))
     model.add(Activation('relu'))
     model.add(Dropout(0.2))
     model.add(Dense(num_classes))
@@ -106,7 +71,7 @@ def train_mlp(TRAINING_SET, BATCH_SIZE, VOCAB_SIZE, MAX_SEQUENCE_LENGTH,EPOCHS, 
 
     time_elapsed = time.time() - start_time
     # Skrive nøkkelparametere til tekstfil
-    log_model_stats(model_directory,TRAINING_SET,x_train
+    utils.log_model_stats(model_directory,TRAINING_SET,x_train
                 ,num_classes, vocab_size, MAX_SEQUENCE_LENGTH
                 , EPOCHS, time_elapsed, save_model_path,
                     LOSS_MODEL, VECTORIZATION_TYPE,VALIDATION_SPLIT, word2vec= None)
@@ -155,21 +120,19 @@ def test_mlp(TEST_SET, MODEL_DIRECTORY, k_output_labels, isMajority_rule=True):
         vectorization_type = re_vectorization_type.group(1)
         print("This utilizes the vectorization: {}".format(str(vectorization_type)))
 
-    #dewey_test, text_test = get_articles(TEST_SET)
+
 
     if isMajority_rule == True:
-        #test_set_dewey = [[["616"], [text_test[0],text_test[1],text_test[3]]], [["362"], [text_test[4],text_test[5],text_test[6]]],
-        #                  [["616"], [text_test[7],text_test[8],text_test[9]]]]
         predictions, test_accuracy= mlp_majority_rule_test(test_set_dewey=TEST_SET,MODEL=model,
                                                                        MAX_SEQUENCE_LENGTH=MAX_SEQUENCE_LENGTH,
-                                                                       VOCAB_SIZE=vocab_size,TRAIN_TOKENIZER = tokenizer,
+                                                                       TRAIN_TOKENIZER = tokenizer,
                                                                        LABEL_INDEX_VECTOR = labels_index,
                                                                        VECTORIZATION_TYPE=vectorization_type,k_output_labels= k_output_labels)
 
     else:
         x_test, y_test = fasttextTest2mlp(TEST_SET, MAX_SEQUENCE_LENGTH, vocab_size, tokenizer, labels_index, VECTORIZATION_TYPE= vectorization_type)
         #test_score,test_accuracy = evaluation(model,x_test,y_test, VERBOSE = 1)
-        predictions = prediction(model, x_test, k_output_labels, labels_index)
+        predictions = utils.prediction(model, x_test, k_output_labels, labels_index)
 
         #print('Test_score:', test_score)
         #print('Test Accuracy', test_accuracy)
@@ -182,9 +145,9 @@ def test_mlp(TEST_SET, MODEL_DIRECTORY, k_output_labels, isMajority_rule=True):
 def fasttextTrain2mlp(FASTTEXT_TRAIN_FILE,MAX_SEQUENCE_LENGTH, VOCAB_SIZE, VECTORIZATION_TYPE, folder):
     '''Converting training_set from fasttext format to MLP-format'''
     if folder ==False:
-        dewey_train, text_train = get_articles(FASTTEXT_TRAIN_FILE)
+        dewey_train, text_train = utils.get_articles(FASTTEXT_TRAIN_FILE)
     else:
-        text_names, dewey_train, text_train = get_articles_from_folder(FASTTEXT_TRAIN_FILE)
+        text_names, dewey_train, text_train = utils.get_articles_from_folder(FASTTEXT_TRAIN_FILE)
 
     labels_index = {}
     labels = []
@@ -216,9 +179,9 @@ def fasttextTrain2mlp(FASTTEXT_TRAIN_FILE,MAX_SEQUENCE_LENGTH, VOCAB_SIZE, VECTO
 
     return x_train, y_train, tokenizer, num_classes,labels_index #x_test, y_test, num_classes
 
-def fasttextTest2mlp(FASTTEXT_TEST_FILE,MAX_SEQUENCE_LENGTH, VOCAB_SIZE, TRAIN_TOKENIZER, LABEL_INDEX_VECTOR, VECTORIZATION_TYPE):
+def fasttextTest2mlp(FASTTEXT_TEST_FILE,MAX_SEQUENCE_LENGTH, TRAIN_TOKENIZER, LABEL_INDEX_VECTOR, VECTORIZATION_TYPE):
     ''' Preparing test data for MLP training'''
-    dewey_test, text_test = get_articles(FASTTEXT_TEST_FILE)
+    dewey_test, text_test = utils.get_articles(FASTTEXT_TEST_FILE)
     test_labels = []
 
     for dewey in dewey_test:
@@ -256,36 +219,16 @@ def mlp_majority_rule_test(test_set_dewey,MODEL,MAX_SEQUENCE_LENGTH, VOCAB_SIZE,
             y_test = to_categorical(np.asarray(y_test))
 
 
-            predictions = prediction(MODEL, x_test, k_output_labels, LABEL_INDEX_VECTOR)
+            predictions = utils.prediction(MODEL, x_test, k_output_labels, LABEL_INDEX_VECTOR)
             y_test_total.append(dewey)
-            majority_rule_preds = evaluator2.majority_rule(predictions,3)
+            majority_rule_preds = evaluator2.majority_rule(predictions,k_output_labels)
             total_preds.append(majority_rule_preds)
             one_pred.append(majority_rule_preds[0])
 
     accuracy = accuracy_score(y_test_total, one_pred)
     return total_preds, accuracy
 
-def prediction(MODEL,X_TEST,k_preds, label_indexes):
-    predictions = MODEL.predict(x=X_TEST)
 
-    all_topk_labels = []
-    for prediction_array in predictions:
-        np_prediction = np.argsort(-prediction_array)[:k_preds]
-        #print(list(np_prediction))
-        topk_labels = []
-        for np_pred in np_prediction:
-
-            for label_name, label_index in label_indexes.items():
-
-                if label_index == np_pred:
-                    label = label_name
-                    topk_labels.append(label)
-
-            all_topk_labels.append(topk_labels)
-        #print(len(topk_labels))
-    #print(all_topk_labels)
-
-    return all_topk_labels
 def evaluation(MODEL, X_TEST,Y_TEST, VERBOSE):
         '''Evaluates model. Return accuracy and score'''
         score = MODEL.evaluate(X_TEST, Y_TEST, VERBOSE)
@@ -293,35 +236,6 @@ def evaluation(MODEL, X_TEST,Y_TEST, VERBOSE):
         test_accuracy = score[1]
 
         return  test_score, test_accuracy
-
-def log_model_stats(model_directory, training_set_name, training_set,
-                 num_classes,vocab_size, max_sequence_length,
-                epochs, time_elapsed,
-                path_to_model, loss_model, vectorization_type, validation_split, word2vec ):
-    ''' Prints model parameters to log-file.'''
-
-    time_stamp = '{:%Y%m%d%H%M%S}'.format(datetime.datetime.now())
-
-    if not os.path.exists(model_directory):
-        os.makedirs(model_directory)
-
-    model_stats_file = open(os.path.join(model_directory,"model_stats"), "a")
-
-    model_stats_file.write("Time:" + str(time_stamp) + '\n'
-                      + "Time elapsed: " + str(time_elapsed) + '\n'
-                      + "Training set:" + training_set_name + "\n"
-                      + "Vocab_size:" + str(vocab_size) + '\n'
-                      + "Max_sequence_length:" + str(max_sequence_length) + '\n'
-                      + "Epochs:" + str(epochs) + '\n'
-                      + "Antall deweys:" + str(num_classes) + '\n'
-                      + "Antall docs i treningssett:" + str(len(training_set)) + '\n'
-                      + "saved_model:" + path_to_model + '\n'
-                      + "loss_model:" + str(loss_model) + '\n'
-                      + "vectorization_type:" + str(vectorization_type)+'\n'
-                      + "Validation_split:" + str(validation_split) + '\n'
-                      + "word2vec:" + str(word2vec)+'\n\n\n'
-                      )
-    model_stats_file.close()
 
 
 

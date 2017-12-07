@@ -13,10 +13,13 @@ import MLP
 import os
 import pickle
 import re
+import evaluator2
+import utils
+from sklearn.metrics import accuracy_score
 
 def fasttextTrain2CNN(training_set, max_sequence_length, vocab_size):
     '''Transforming training set from fasttext format to CNN format.'''
-    dewey_train, text_train = MLP.get_articles(training_set)
+    dewey_train, text_train = utils.get_articles(training_set)
     labels_index = {}
     labels = []
     for dewey in set(dewey_train):
@@ -60,14 +63,15 @@ def create_embedding_matrix(word2vecModel,word_index):
             continue
     return embedding_matrix, EMBEDDING_DIM
 
-def train_cnn(training_set, VOCAB_SIZE, MAX_SEQUENCE_LENGTH,EPOCHS, FOLDER_TO_SAVE_MODEL, loss_model, VALIDATION_SPLIT, word2vec_file_name):
+def train_cnn(training_set, VOCAB_SIZE, MAX_SEQUENCE_LENGTH,EPOCHS, FOLDER_TO_SAVE_MODEL, loss_model,
+              VALIDATION_SPLIT, word2vec_file_name):
     '''Training embedded cnn model'''
     start_time = time.time()
 
-    word2vec = word2vec_file_name
+    #word2vec = word2vec_file_name
 
     x_train, y_train, word_index, labels_index, tokenizer, num_classes = fasttextTrain2CNN(training_set=training_set, max_sequence_length=MAX_SEQUENCE_LENGTH,vocab_size= VOCAB_SIZE)
-    embedding_matrix, EMBEDDING_DIM  = create_embedding_matrix(word2vec,word_index)
+    embedding_matrix, EMBEDDING_DIM  = create_embedding_matrix(word2vec_file_name,word_index)
 
     sequence_input = Input(shape = (MAX_SEQUENCE_LENGTH,), dtype = 'int32')
     embedding_layer = Embedding(len(word_index) + 1,
@@ -76,6 +80,7 @@ def train_cnn(training_set, VOCAB_SIZE, MAX_SEQUENCE_LENGTH,EPOCHS, FOLDER_TO_SA
                                 input_length=MAX_SEQUENCE_LENGTH,
                                 trainable=False)
     embedded_sequences = embedding_layer(sequence_input)
+
     x = Conv1D(128, 5, activation = 'relu')(embedded_sequences)
     x = MaxPooling1D(5)(x)
     x = Conv1D(128, 5, activation = 'relu')(x)
@@ -111,7 +116,7 @@ def train_cnn(training_set, VOCAB_SIZE, MAX_SEQUENCE_LENGTH,EPOCHS, FOLDER_TO_SA
 
 
     save_model_path = model_directory+"/model.bin"
-    MLP.log_model_stats(model_directory = model_directory , training_set_name = training_set
+    utils.log_model_stats(model_directory = model_directory , training_set_name = training_set
                          ,training_set = x_train,num_classes = num_classes, vocab_size = VOCAB_SIZE,
                          max_sequence_length= MAX_SEQUENCE_LENGTH, epochs=EPOCHS, time_elapsed = TIME_ELAPSED,
                          path_to_model= save_model_path, loss_model =loss_model,  vectorization_type= None,
@@ -129,9 +134,10 @@ def train_cnn(training_set, VOCAB_SIZE, MAX_SEQUENCE_LENGTH,EPOCHS, FOLDER_TO_SA
     with open(model_directory+'/label_indexes.pickle', 'wb') as handle:
         pickle.dump(labels_index, handle, protocol=pickle.HIGHEST_PROTOCOL)
     return model_directory
-def cnn_pred(test_set, mod_dir, k_top_labels):
+
+def cnn_pred(test_set, mod_dir, k_top_labels, isMajority_rule=True):
     '''Test module for CNN'''
-    dewey_test, text_test = MLP.get_articles(test_set)
+    dewey_test, text_test = utils.get_articles(test_set)
     #Loading model
     model = load_model(mod_dir+'/model.bin')
 
@@ -147,14 +153,6 @@ def cnn_pred(test_set, mod_dir, k_top_labels):
         params_data = params_file.read()
 
 
-    test_labels = []
-    for dewey in dewey_test:
-        test_labels.append(labels_index[dewey])
-
-
-    test_sequences = tokenizer.texts_to_sequences(text_test)
-
-    test_word_index = tokenizer.word_index
     print('Found {} unique tokens.'.format(len(test_word_index)))
 
 
@@ -166,26 +164,71 @@ def cnn_pred(test_set, mod_dir, k_top_labels):
     if re_vocab_size:
         vocab_size = int(re_vocab_size.group(1))
         print("The vocabulary size: {}".format(vocab_size))
+    if isMajority_rule == True:
+        predictions, test_accuracy = cnn_majority_rule_test(test_set_dewey=test_set, MODEL=model,
+                                                            MAX_SEQUENCE_LENGTH = MAX_SEQUENCE_LENGTH,
+                                                            TRAIN_TOKENIZER = tokenizer, LABEL_INDEX_VECTOR = labels_index,
+                                                            k_output_labels=k_top_labels)
 
+    else:
+        test_labels = []
+        for dewey in dewey_test:
+             test_labels.append(labels_index[dewey])
+        test_sequences = tokenizer.texts_to_sequences(text_test)
+        test_word_index = tokenizer.word_index
+        x_test = pad_sequences(test_sequences, maxlen=MAX_SEQUENCE_LENGTH)
 
+        y_test = to_categorical(test_labels)
 
+        test_score, test_accuracy = model.evaluate(x_test, y_test, batch_size= 64, verbose=1)
+        print('Test_score:', str(test_score))
+        print('Test Accuracy', str(test_accuracy))
+        #k_top_labels=3
+        predictions = utils.prediction(model, x_test, k_top_labels,labels_index)
 
-    x_test = pad_sequences(test_sequences, maxlen=MAX_SEQUENCE_LENGTH)
-
-    y_test = to_categorical(test_labels)
-
-    test_score, test_accuracy = model.evaluate(x_test, y_test, batch_size= 64, verbose=1)
-    print('Test_score:', str(test_score))
-    print('Test Accuracy', str(test_accuracy))
-    k_top_labels=3
-    predictions = MLP.prediction(model, x_test, k_top_labels,labels_index )
-    # Writing results to txt-file.
+    #Writing results to txt-file.
     with open(mod_dir+"/result.txt",'a') as result_file:
         result_file.write('test_set:'+test_set+'\n'+
-                          'Test_score:'+ str(test_score)+ '\n'
+                          #'Test_score:'+ str(test_score)+ '\n'
                           'Test_accuracy:' + str(test_accuracy)+'\n\n')
     return predictions
-def run_cnn_tests(TRAINING_SET, TEST_SET, VOCAB_VECTOR, SEQUENCE_LENGTH_VECTOR, EPOCHS, FOLDER_TO_SAVE_MODEL, LOSS_MODEL,  validation_split, word2vec_model, k_top_labels):
+
+def cnn_majority_rule_test(test_set_dewey,MODEL,MAX_SEQUENCE_LENGTH, TRAIN_TOKENIZER, LABEL_INDEX_VECTOR
+                           ,k_output_labels):
+    total_preds =[]
+    y_test_total = []
+    one_pred = []
+    for i in range(len(test_set_dewey)):
+
+
+            dewey =test_set_dewey[i][0]
+
+            texts = test_set_dewey[i][1]
+            dewey_label_index= LABEL_INDEX_VECTOR[dewey.strip()]
+            y_test = []
+            new_texts =[]
+
+            for j in range(0, len(texts)):
+                y_test.append(dewey_label_index)
+                new_texts.append(' '.join(texts[j]))
+
+            test_sequences = TRAIN_TOKENIZER.texts_to_sequences(new_texts)
+            #test_sequences_matrix = TRAIN_TOKENIZER.sequences_to_matrix(test_sequences, mode=VECTORIZATION_TYPE)
+            x_test = pad_sequences(test_sequences, maxlen=MAX_SEQUENCE_LENGTH)
+            y_test = to_categorical(np.asarray(y_test))
+
+
+            predictions = MLP.prediction(MODEL, x_test, k_output_labels, LABEL_INDEX_VECTOR)
+            y_test_total.append(dewey)
+            majority_rule_preds = evaluator2.majority_rule(predictions,k_output_labels)
+            total_preds.append(majority_rule_preds)
+            one_pred.append(majority_rule_preds[0])
+
+    accuracy = accuracy_score(y_test_total, one_pred)
+    return total_preds, accuracy
+
+def run_cnn_tests(TRAINING_SET, TEST_SET, VOCAB_VECTOR, SEQUENCE_LENGTH_VECTOR, EPOCHS, FOLDER_TO_SAVE_MODEL, LOSS_MODEL,
+                  validation_split, word2vec_model, k_top_labels):
     '''Module for running test sequences with different parameters.'''
 
     validation_split=float(validation_split)
@@ -214,8 +257,7 @@ def run_cnn_tests(TRAINING_SET, TEST_SET, VOCAB_VECTOR, SEQUENCE_LENGTH_VECTOR, 
             for epoch_test in EPOCHS:
                 run_training=True
                 if run_training:
-                    try:
-                        test_mod_dir=train_cnn(TRAINING_SET,
+                    test_mod_dir=train_cnn(TRAINING_SET,
                                                VOCAB_SIZE=vocab_test,
                                                MAX_SEQUENCE_LENGTH=sequence_length_test,
                                                EPOCHS=epoch_test,
@@ -224,10 +266,7 @@ def run_cnn_tests(TRAINING_SET, TEST_SET, VOCAB_VECTOR, SEQUENCE_LENGTH_VECTOR, 
                                                VALIDATION_SPLIT= validation_split,
                                                word2vec_file_name= word2vec_model
                                                )
-                        #run_training=False
-                    except TypeError('NoneType') as e:
-                        print(e)
-                        print("Trying again")
+
                 try:
                     cnn_pred(TEST_SET, test_mod_dir, k_top_labels)
                 except ValueError:
