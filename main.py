@@ -42,6 +42,7 @@ if __name__ == '__main__':
 
     test_text=data_prep.load_set(test_folder)
     training_text=data_prep.load_set(training_folder)
+    data_prep.create_folder("tmp")
     test_file=data_prep.save_file("tmp","test_file.txt",test_text)
     training_file=data_prep.save_file("tmp","training_file.txt",training_text)
     data_prep.create_folder(os.path.join("fasttext",config["ft_run_name"]))
