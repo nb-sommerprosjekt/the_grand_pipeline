@@ -1,7 +1,7 @@
 #config-file: 
 
 #preprocessing:	
-name_corpus:::test_helg3
+name_corpus:::test_mandag_cnn
 data_set:::tgc
 data_set_folder:::data_set
 stemming:::True
@@ -17,15 +17,15 @@ test_ratio:::0.20
 
 
 #process_training:
-article_size:::500
+article_size:::100000000000
 create_fake:::True
-wikipedia:::True
+wikipedia:::False
 minimum_articles:::300
 dewey_digits:::3
 
 #data_augmentation
 da_run:::False
-da_splits:::5
+da_splits:::0
 da_noise_percentage:::10
 da_noise_method:::noise_on_parts
 
@@ -33,7 +33,7 @@ da_noise_method:::noise_on_parts
 
 
 #fast_text:
-ft_run:::True
+ft_run:::False
 ft_epochs:::1,2
 ft_lr:::0.3	
 ft_lr_update:::98
@@ -46,11 +46,11 @@ ft_run_name:::test_helg3
 ft_top_k_labels:::3
 
 #mlp:
-mlp_run:::False
-mlp_epoch_vector:::10,20,30,40,50
+mlp_run:::True
+mlp_epoch_vector:::10
 mlp_save_model_folder:::mlp
 mlp_batch_size:::64
-mlp_vocab_size_vector:::1000,5000,10000,20000,50000
+mlp_vocab_size_vector:::20000,50000
 mlp_sequence_length_vector:::5000
 mlp_loss_model:::categorical_crossentropy
 mlp_vectorization_type:::binary
@@ -60,10 +60,10 @@ mlp_k_labels:::3
 
 #CNN:
 cnn_run:::False
-cnn_epoch_vector:::10,20,30,40,50
+cnn_epoch_vector:::1
 cnn_save_model_folder:::cnn
 cnn_batch_size:::64
-cnn_vocab_size_vector:::1000,5000,10000,20000,50000
+cnn_vocab_size_vector:::1000
 cnn_sequence_length_vector:::500
 cnn_loss_model:::categorical_crossentropy
 cnn_validation_split:::0.0
