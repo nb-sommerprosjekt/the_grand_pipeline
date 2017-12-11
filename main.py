@@ -38,7 +38,7 @@ if __name__ == '__main__':
 
     rubbish_folder,valid_deweys,training_set_length=data_prep.remove_unecessary_articles(training_folder,corpus_folder,config["minimum_articles"],config["dewey_digits"])
     #print(valid_deweys)
-    test_folder,test_set_length,dewey_and_texts=data_prep.prep_test_set(test_folder,valid_deweys,config["article_size"],config["dewey_digits"])
+    test_folder,test_set_length,dewey_and_texts=data_prep.prep_test_set(test_folder,valid_deweys,config["article_size"],config["dewey_digits"], rubbish_folder)
 
     test_text=data_prep.load_set(test_folder)
     training_text=data_prep.load_set(training_folder)
