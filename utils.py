@@ -1,6 +1,6 @@
 import os
 import datetime
-
+import numpy as np
 def get_articles(original_name):
     # Tar inn en textfil som er labelet på fasttext-format. Gir ut to arrays. Et med deweys og et med tekstene. [deweys],[texts]
     articles=open(original_name,"r")

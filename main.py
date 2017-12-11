@@ -24,9 +24,9 @@ if __name__ == '__main__':
 
         data_prep.add_wiki_to_training(wiki_corpus_folder,training_folder)
     #load_config_file
-    training_folder = "data_set/test_torsdag_folder/test_torsdag_test"
-    test_folder = "data_set/test_torsdag_w_fakes_folder/test_torsdag_w_fakes_test"
-    training_folder=data_prep.split_articles(training_folder,1000)
+    #training_folder = "data_set/test_torsdag_folder/test_torsdag_test"
+    #test_folder = "data_set/test_torsdag_w_fakes_folder/test_torsdag_w_fakes_test"
+    training_folder=data_prep.split_articles(training_folder,config["article_size"])
     if config["da_run"] == "True":
         artificial_training_folder = training_folder + "artificial"
         if os.path.exists(artificial_training_folder):
