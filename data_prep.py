@@ -315,7 +315,7 @@ def remove_unecessary_articles(article_folder, corpus_folder, minimum_articles, 
     return rubbish_folder,valid_deweys,set_length
 
 
-def prep_test_set(test_folder,valid_deweys,article_length,dewey_digits):
+def prep_test_set(test_folder,valid_deweys,article_length,dewey_digits, rubbish_folder):
     print("Prepping test-folder.")
     dewey_digits=int(dewey_digits)
     #test_folder=split_articles(test_folder,article_length)
