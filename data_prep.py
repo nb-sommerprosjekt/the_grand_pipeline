@@ -254,15 +254,10 @@ def split_articles(folder, article_length):
         for file in files:
             dewey, text = read_dewey_and_text(os.path.join(folder, file))
             texts=split_text(text,article_length)
-            for i,text in enumerate(texts):
-
-                temp = list(text)
-                text=" ".join(temp)
-                #print(i, len(text))
-                #print(os.path.join(folder_split,file[:-4]+"_"+str(i)+file[-4:]))
-                with open(os.path.join(folder_split,file[:-4]+"_"+str(i)+file[-4:]),"w+") as f:
-                    f.write("__label__"+dewey+" "+str(text))
-
+            for i, text in enumerate(texts):
+                print(os.path.join(folder_split, file[:-4] + "_" + str(i) + file[-4:]))
+                with open(os.path.join(folder_split, file[:-4] + "_" + str(i) + file[-4:]), "w+") as f:
+                    f.write("__label__" + dewey + " " + str(text))
 
     return folder_split
 
